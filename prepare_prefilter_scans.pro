@@ -82,7 +82,7 @@ ENDIF
 
 central_wave_range = [-0.125,0.125]
 left_wave_range    = [-0.75,-0.50]
-right_wave_range   = [-0.75,-0.50]
+right_wave_range   = [0.50,0.75]
 ; the uniform wavelength step size onto which to interpolate the prefilter profiles
 ; -- in Angstroms
 IF NOT KEYWORD_SET(wvstep_even) THEN wvstep_even         = 0.02
@@ -154,32 +154,33 @@ for logn=0,N_ELEMENTS(prefscan_all_files)-1 DO BEGIN
         scan0          = load_prefilter_scan(scan_log_info(scann))
         scan0_len      = N_ELEMENTS(scan0.COUNTS)
         scan0_len_half = FIX(scan0_len / 2.)
+        points_filled     = INDGEN(scan0_len) + midpos - scan0_len_half
 
         prefilter_scan_all(cnt).FP1_voltages(midpos - scan0_len_half:midpos + scan0_len_half) = scan0.FP1_voltages
         prefilter_scan_all(cnt).FP2_voltages(midpos - scan0_len_half:midpos + scan0_len_half) = scan0.FP2_voltages
-        fp_volts_valid    = WHERE((ABS(scan0.FP1_voltages) LE 2048) AND (ABS(scan0.FP2_voltages) LE 2048))
-        num_valid         = N_ELEMENTS(fp_volts_valid)
-        points_filled     = INDGEN(scan0_len) + midpos - scan0_len_half
+        fp_volts_valid    = WHERE((ABS(scan0.FP1_voltages) LE 2048) AND (ABS(scan0.FP2_voltages) LE 2048), num_valid)
         
-        prefilter_scan_all(cnt).Counts = (MEAN((scan0.Counts(fp_volts_valid))(0:4)) + MEAN((scan0.Counts(fp_volts_valid))(-5:-1))) / 2.
-        prefilter_scan_all(cnt).Counts(points_filled(fp_volts_valid))       = scan0.Counts(fp_volts_valid)
-        ;prefilter_scan_all(cnt).Counts(0:MIN(points_filled(fp_volts_valid)-1)                           = MEAN(scan0.Counts(0:4))
-        ;prefilter_scan_all(cnt).Counts(midpos + scan0_len_half:*)                             = MEAN(scan0.Counts(-5:-1))
-
-        prefilter_scan_all(cnt).Wavelengths(0:midpos-1)                           = -10
-        prefilter_scan_all(cnt).Wavelengths(midpos+1:*)                           = 10
-        prefilter_scan_all(cnt).Wavelengths(midpos - scan0_len_half:midpos + scan0_len_half)  = scan0.Wavelengths
- 
-        prefilter_scan_all(cnt).valid(points_filled(fp_volts_valid)) = 1
-        
-        prefilter_scan_all(cnt).Scan_Location   = scan0.Scan_Location
-        prefilter_scan_all(cnt).Scan_Start_Date = scan0.Scan_Start_Date
-        prefilter_scan_all(cnt).Scan_End_Date   = scan0.Scan_End_Date
-        prefilter_scan_all(cnt).scan_date_text  = scan0.scan_date_text
-        prefilter_scan_all(cnt).logfile_used    = scan0.logfile_used
-        prefilter_scan_all(cnt).filter_name     = scan0.filter_name
-
-        cnt += 1
+        IF num_valid GE 11 THEN BEGIN
+            prefilter_scan_all(cnt).Counts = (MEAN((scan0.Counts(fp_volts_valid))(0:4)) + MEAN((scan0.Counts(fp_volts_valid))(-5:-1))) / 2.
+            prefilter_scan_all(cnt).Counts(points_filled(fp_volts_valid))       = scan0.Counts(fp_volts_valid)
+            ;prefilter_scan_all(cnt).Counts(0:MIN(points_filled(fp_volts_valid)-1)                           = MEAN(scan0.Counts(0:4))
+            ;prefilter_scan_all(cnt).Counts(midpos + scan0_len_half:*)                             = MEAN(scan0.Counts(-5:-1))
+    
+            prefilter_scan_all(cnt).Wavelengths(0:midpos-1)                           = -10
+            prefilter_scan_all(cnt).Wavelengths(midpos+1:*)                           = 10
+            prefilter_scan_all(cnt).Wavelengths(midpos - scan0_len_half:midpos + scan0_len_half)  = scan0.Wavelengths
+     
+            prefilter_scan_all(cnt).valid(points_filled(fp_volts_valid)) = 1
+            
+            prefilter_scan_all(cnt).Scan_Location   = scan0.Scan_Location
+            prefilter_scan_all(cnt).Scan_Start_Date = scan0.Scan_Start_Date
+            prefilter_scan_all(cnt).Scan_End_Date   = scan0.Scan_End_Date
+            prefilter_scan_all(cnt).scan_date_text  = scan0.scan_date_text
+            prefilter_scan_all(cnt).logfile_used    = scan0.logfile_used
+            prefilter_scan_all(cnt).filter_name     = scan0.filter_name
+    
+            cnt += 1
+        ENDIF
         
     ENDFOR
 ENDFOR
