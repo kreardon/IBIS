@@ -13,6 +13,8 @@
 ; KEYWORD PARAMETERS:
 ;       verbose = turns on prining of each log line for the requested prefilter scan  
 ;
+;       wvstep_even = wavelength step size for even interpolation (default = 0.02 Angstrom)
+;
 ;       params_quality_metric = paramaters to tune the acceptable ranges of several 
 ;                               quality metrics used to select "valid" prefilter scans 
 ; OUTPUTS:
