@@ -69,15 +69,15 @@ num_files          = N_ELEMENTS(prefscan_all_files)
 IF N_ELEMENTS(verbose) EQ 0 THEN verbose=1
 
 IF NOT KEYWORD_SET(params_quality_metric) THEN BEGIN
-    param_quality_metric       = FLTARR(2,6)
+    params_quality_metric       = FLTARR(2,6)
     ; the range of acceptable average PMT counts around the prefilter peak transmission
-    param_quality_metric(*,1)  = [1.0e4, 2.5e5]
+    params_quality_metric(*,1)  = [1.0e4, 2.5e5]
     ; ratio of counts in the central portion of the scan versus the average of the two wings
-    param_quality_metric(*,3)  = [1.01, 1.15]
+    params_quality_metric(*,3)  = [1.01, 1.15]
     ; ratio of counts in the left versus the right wing
-    param_quality_metric(*,4)  = [0.95, 1.05]
+    params_quality_metric(*,4)  = [0.95, 1.05]
     ; the RMS values of the small-scale, normalized residuals of the prefilter scan profile
-    param_quality_metric(*,5)  = [0.0, 0.025]
+    params_quality_metric(*,5)  = [0.0, 0.025]
 ENDIF
 
 central_wave_range = [-0.125,0.125]
@@ -216,10 +216,10 @@ FOR scann=0,num_uniq-1 DO BEGIN
     quality_metrics(5,scann) = STDDEV(int_smooth(left0[0]:right0[1]))
 ENDFOR
 
-qcrit1 = (quality_metrics(1,*) LE param_quality_metric(1,1)) AND (quality_metrics(1,*) GE param_quality_metric(0,1))
-qcrit3 = (quality_metrics(3,*) LE param_quality_metric(1,3)) AND (quality_metrics(3,*) GE param_quality_metric(0,3))  
-qcrit4 = (quality_metrics(4,*) LE param_quality_metric(1,4)) AND (quality_metrics(4,*) GE param_quality_metric(0,4)) 
-qcrit5 = (quality_metrics(5,*) LE param_quality_metric(1,5)) AND (quality_metrics(4,*) GE param_quality_metric(0,5)) 
+qcrit1 = (quality_metrics(1,*) LE params_quality_metric(1,1)) AND (quality_metrics(1,*) GE params_quality_metric(0,1))
+qcrit3 = (quality_metrics(3,*) LE params_quality_metric(1,3)) AND (quality_metrics(3,*) GE params_quality_metric(0,3))  
+qcrit4 = (quality_metrics(4,*) LE params_quality_metric(1,4)) AND (quality_metrics(4,*) GE params_quality_metric(0,4)) 
+qcrit5 = (quality_metrics(5,*) LE params_quality_metric(1,5)) AND (quality_metrics(4,*) GE params_quality_metric(0,5)) 
 quality_metrics(6,*) = qcrit1 * qcrit3 * qcrit4 * qcrit5
 quality_valid        = WHERE(REFORM(quality_metrics(6,*)), valid_count)
 IF verbose THEN PRINT,' --> Found ' + STRTRIM(valid_count,2) + ' profiles scans meeting the quality criteria for the ' + STRTRIM(scan0.filter_name,2) + ' filter.'
