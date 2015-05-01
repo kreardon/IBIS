@@ -82,7 +82,7 @@ ENDIF
 
 central_wave_range = [-0.125,0.125]
 left_wave_range    = [-0.75,-0.50]
-right_wave_range   = [0.50,0.75]
+right_wave_range   = [0.5,0.75]
 ; the uniform wavelength step size onto which to interpolate the prefilter profiles
 ; -- in Angstroms
 IF NOT KEYWORD_SET(wvstep_even) THEN wvstep_even         = 0.02
@@ -156,8 +156,8 @@ for logn=0,N_ELEMENTS(prefscan_all_files)-1 DO BEGIN
         scan0_len_half = FIX(scan0_len / 2.)
         points_filled     = INDGEN(scan0_len) + midpos - scan0_len_half
 
-        prefilter_scan_all(cnt).FP1_voltages(midpos - scan0_len_half:midpos + scan0_len_half) = scan0.FP1_voltages
-        prefilter_scan_all(cnt).FP2_voltages(midpos - scan0_len_half:midpos + scan0_len_half) = scan0.FP2_voltages
+        prefilter_scan_all(cnt).FP1_voltages(midpos - scan0_len_half:midpos - scan0_len_half + scan0_len - 1) = scan0.FP1_voltages
+        prefilter_scan_all(cnt).FP2_voltages(midpos - scan0_len_half:midpos - scan0_len_half + scan0_len - 1) = scan0.FP2_voltages
         fp_volts_valid    = WHERE((ABS(scan0.FP1_voltages) LE 2048) AND (ABS(scan0.FP2_voltages) LE 2048), num_valid)
         
         IF num_valid GE 11 THEN BEGIN
@@ -168,7 +168,7 @@ for logn=0,N_ELEMENTS(prefscan_all_files)-1 DO BEGIN
     
             prefilter_scan_all(cnt).Wavelengths(0:midpos-1)                           = -10
             prefilter_scan_all(cnt).Wavelengths(midpos+1:*)                           = 10
-            prefilter_scan_all(cnt).Wavelengths(midpos - scan0_len_half:midpos + scan0_len_half)  = scan0.Wavelengths
+            prefilter_scan_all(cnt).Wavelengths(midpos - scan0_len_half:midpos - scan0_len_half + scan0_len - 1)  = scan0.Wavelengths
      
             prefilter_scan_all(cnt).valid(points_filled(fp_volts_valid)) = 1
             
@@ -181,7 +181,6 @@ for logn=0,N_ELEMENTS(prefscan_all_files)-1 DO BEGIN
     
             cnt += 1
         ENDIF
-        
     ENDFOR
 ENDFOR
 
