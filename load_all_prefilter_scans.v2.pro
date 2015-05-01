@@ -17,7 +17,7 @@ version = '2.1'
 wvstep_new                    = 0.02
 
 ; the wavelength of the filter to search for
-filter      = 6173
+filter      = 6563
 filter_name = STRTRIM(filter,2)
 
 ; the filter specific paramaters need from here on are now saved in a separate file for clarity.
@@ -26,6 +26,8 @@ filter_name = STRTRIM(filter,2)
 ; define the acceptable ranges for the quality metric parameters. But in this case we need to 
 ; provide a dummy value for the number of valid prefilter scans we will have. 
 prefilter_scan_good_num = 200
+do_params               = 1
+do_fringes              = 0
 @load_all_prefilter_scans.filter_params.pro
 
 ; ----------------------------------------------------------------------
@@ -54,6 +56,8 @@ scan_range_center             = INDGEN(21) + FIX(num_wv_steps/2.) - 10
 ; the filter specific paramaters need from here on are now saved in a separate file for clarity
 ; And now we run the file specific paramater definition file again, this time using the 
 ; actual value for the number of valid prefilter scans (prefilter_scan_good_num, defined above).
+do_params               = 0
+do_fringes              = 1
 @load_all_prefilter_scans.filter_params.pro
 
 ; ----------------------------------------------------------------------
@@ -82,13 +86,15 @@ scan_median   = FLTARR(num_wv_steps)
 FOR nn=0,num_wv_steps-1 DO BEGIN
     pref_ratio            = REFORM( prefilter_scan_even(nn,*) / (pref_sum(nn,*)>0.001))
     scan_median(nn)       = MEDIAN(pref_ratio(WHERE(pref_sum(nn,*) GE 0.01)))
+    ; we could also compute the average in this same way, but that is too clunky...
+    ; scan_average(nn)      = MEAN(pref_ratio(WHERE(pref_sum(nn,*) GE 0.01)))
 ENDFOR
 
 ; ----------------------------------------------------------------------
 ;  isolate, locate, and align small-scale fringes on prefilter profile
 ; ----------------------------------------------------------------------
 
-fringes = (prefilter_scan_even_norm) / (REBIN(scan_average ,num_wv_steps, prefilter_scan_good_num)>0.001)
+fringes = (prefilter_scan_even_norm) / (REBIN(scan_median ,num_wv_steps, prefilter_scan_good_num)>0.001)
 
 fringes_align = fringes
 phase_off = FLTARR(prefilter_scan_good_num)
@@ -150,7 +156,11 @@ ENDFOR
 ; ----------------------------------------------------------------------
 
 ; divide out model fringes
-prefilter_scan_even_norm_nofringe  = prefilter_scan_even_norm / fringes_model_sft_scl
+IF use_scaled_fringes THEN BEGIN
+    prefilter_scan_even_norm_nofringe  = prefilter_scan_even_norm / fringes_model_sft_scl
+ENDIF ELSE BEGIN
+    prefilter_scan_even_norm_nofringe  = prefilter_scan_even_norm / fringes_model_sft
+ENDELSE
 
 ; Use the center-of-gravity method to determine any shifts in the fringe-corrected profiles
 prefilter_cog                           = FLTARR(prefilter_scan_good_num)
@@ -174,8 +184,8 @@ prefilter_scan_even_norm_cent      = prefilter_scan_even_norm/REBIN(prefilter_su
 IF N_ELEMENTS(pref_sum_range_final) LE 3 THEN pref_sum_range_final = INDGEN(prefilter_scan_good_num)
 
 ; sum up the normalized profiles
-pref_ave_cnts_nofringe = REBIN(FLOAT(prefilter_scan_even_norm2_nofringe(*,pref_sum_range) GE 0.01), num_wv_steps, 1)
-pref_ave_nofringe      = REBIN(FLOAT(prefilter_scan_even_norm2_nofringe(*,pref_sum_range)),         num_wv_steps, 1)
+pref_ave_cnts_nofringe = REBIN(FLOAT(prefilter_scan_even_norm2_nofringe(*,pref_sum_range_final) GE 0.01), num_wv_steps, 1)
+pref_ave_nofringe      = REBIN(FLOAT(prefilter_scan_even_norm2_nofringe(*,pref_sum_range_final)),         num_wv_steps, 1)
 ; and construct an averaged, normalized profile
 pref_ave_ref           = pref_ave_nofringe / (pref_ave_cnts_nofringe>0.001)
 pref_ave_ref          /= MAX(pref_ave_ref)
@@ -183,7 +193,7 @@ pref_ave_ref          /= MAX(pref_ave_ref)
 ;alternatively, construct the median profile, by selecting valid points at each wavelength position.
 pref_med_ref = FLTARR(num_wv_steps)
 FOR nn=0,num_wv_steps-1 DO BEGIN
-    goodp = WHERE(prefilter_scan_even_norm2_nofringe(nn,pref_sum_range) GE 0.05,numgood) + min(pref_sum_range)
+    goodp = WHERE(prefilter_scan_even_norm2_nofringe(nn,pref_sum_range_final) GE 0.05,numgood) + min(pref_sum_range_final)
     IF NUMGOOD GE 1 THEN pref_med_ref(nn) = MEDIAN(prefilter_scan_even_norm2_nofringe(nn,goodp),/EVEN)
 ENDFOR
 pref_med_ref /= MAX(pref_med_ref)
@@ -193,7 +203,7 @@ valid_pts_out = WHERE( pref_ave_cnts_nofringe GE 3./prefilter_scan_good_num)
 execute_out =  EXECUTE('prefilt' + filter_name + '_ref_main        = pref_ave_ref(valid_pts_out)')
 execute_out =  EXECUTE('prefilt' + filter_name + '_ref_wvscl       = wavelength_scale_new(valid_pts_out)')
 execute_out =  EXECUTE('prefilt' + filter_name + '_fringe          = INTERPOL(model_fringe, wavelength_scale_new_fine, wavelength_scale_new(valid_pts_out),/SPLINE)')
-execute_out =  EXECUTE('prefilt' + filter_name + '_ref_interval    = [prefscans_even[MIN(pref_sum_range)].scan_date_text, prefscans_even[MAX(pref_sum_range)].scan_date_text]')
+execute_out =  EXECUTE('prefilt' + filter_name + '_ref_interval    = [prefscans_even[MIN(pref_sum_range_final)].scan_date_text, prefscans_even[MAX(pref_sum_range_final)].scan_date_text]')
 CALDAT,SysTime(/Julian,/UTC),mo,dd,yr
 provenance  = '''Calculated using load_all_prefilter_scans.pro, v' + version + ', ' + STRING(yr,mo,dd,FORMAT='(%"%4i-%2.2i-%2.2i")') + ', by K. Reardon (kevinpreardon@gmail.com)'''
 execute_out =  EXECUTE('prefilt' + filter_name + '_ref_source      = ' + provenance)
