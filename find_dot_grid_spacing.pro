@@ -15,15 +15,18 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
 ; INPUTS:
 ;        grid_image_input = image of dot grid. It should be rotated to within ~0.2 degrees of having
 ;                               the dots aligned with the array axes
-;        start_pos_dot    = pixel coordinates of dot in lower left corner; if it is not a two-element
-;                               array, user will be prompted to click on lower-left dot.
-;        step_size        = initial estimates of the pixel separation between dots
+;        start_pos_dot    = [optional] pixel coordinates of dot in lower left corner; if it is not a two-element
+;                               array, user will be prompted to click on lower-left dot.; updated with
+;                               dot position determined by grid fitting process
+;        step_size        = [optional] initial estimates of the pixel separation between dots; updated with
+;                               step size determined from fitting process.
 ; OUTPUTS:
 ;        spatial_scale = calculated spatial scale in 
 ; KEYWORDS (Input):
 ;        bootstrap     = instructs the user to click on several dots on the image in order to
 ;                            to make an initial guess at the dot spacing
-;        fft_spacing   = use an FFT technique to make initial guess at grid spacing
+;        fft_spacing   = use an FFT technique to make initial guess at grid spacing;
+;                            overrides any user input value for step_size.
 ;        data_mask     = a mask, the same size as the input image, to apply to the input image in
 ;                            order to eliminate points (e.g. the edges of the field) that might confuse
 ;                            the fitting algorithm
@@ -34,13 +37,13 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
 ;        verbose       = print more detailed information during and at end of fitting process
 ;        sobel_cutoff  = the input threshold to be applied to the image to define the 
 ;                            circle points around each dot to which to apply the fit
-;        correlation_refine = by default, the program uses cross-correlation of the dot images with
+;        correlation_refine = [default=yes] use cross-correlation of the individual dot cutouts with
 ;                                 with the average dot image in order to better refine the dot positions.
 ;                                 
 ; KEYWORDS (Output):
 ;        dot_pos_map   = the map of [x,y,radius] parameters for all the fitted dots
 ;        rotation_grid = the calculated rotation in x and y of the dot grid
-
+;
 ; COMMON BLOCKS:
 ;        None.
 ; SIDE EFFECTS:
@@ -48,7 +51,7 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
 ; RESTRICTIONS:
 ; PROCEDURE:
 ; MODIFICATION HISTORY:
-;        KPR
+;        KPR  - April 2017 - original implementation
 ;-
 
 
@@ -73,8 +76,6 @@ dst_prime_focus_scale = 3.76  ; arcsec / mm
 IF N_ELEMENTS(arcsec_step)  LT 1 THEN  arcsec_step = 0.5 * dst_prime_focus_scale
 
 grid_image_size = SIZE(grid_image_input)
-
-IF N_ELEMENTS(step_size) LT 2 THEN step_size_default = [19.6, 19.6] ELSE step_size_default = step_size
 
 grid_image = grid_image_input / MEDIAN(grid_image_input)
 
@@ -124,6 +125,8 @@ ENDIF ELSE BEGIN
     IF verbose GE 1 THEN PRINT, 'Input starting position [ ' + STRTRIM( start_pos[0],2) + ', ' + STRTRIM( start_pos[1],2) + ' ]'
 ENDELSE
 
+IF N_ELEMENTS(step_size) LT 2 THEN step_size_default = [19.6, 19.6] ELSE step_size_default = step_size
+
 IF Keyword_Set(fft_spacing) THEN BEGIN
     grid_im_fft_x = FLTARR(grid_image_size[1])
     apod_win      = apod(grid_image_size[1], 1, 0.04, 0.0, 2)
@@ -147,47 +150,53 @@ IF Keyword_Set(fft_spacing) THEN BEGIN
     grid_im_fft_y_lc      = lc_find(-grid_im_fft_y,grid_im_fft_y_maxpos-10,grid_im_fft_y_maxpos+10,3)
     grid_im_fft_ystep     = grid_image_size[2]/grid_im_fft_y_lc[0]
     
-    step_size = [grid_im_fft_xstep, grid_im_fft_ystep]
-    dot_spacing_type = 'FFT-determined'
+    step_size_default = [grid_im_fft_xstep, grid_im_fft_ystep]
 ENDIF
 
 IF Keyword_Set(bootstrap) THEN BEGIN
     stride = 19.5
     TVLCT,rrct,ggct,bbct,/GET
     LOADCT,5
-    
+        
     tvcirc,start_pos[0] + step_size_default[0] * 2, start_pos[1] + step_size_default[1] * 2, 18,col=100
     PRINT,'Choosing grid dot two steps away in x- and y- directions;'
     PRINT,'Dot should be approximately in center of circle. Click on center of appropriate dot'
     crs, clickx_2, clicky_2, /Device, /Quiet
     stride_x = (clickx_2 - start_pos[0]) / 2.
     stride_y = (clicky_2 - start_pos[1]) / 2.
-    
+        
     FOR stp=1,10 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,/Device
-
+    
     tvcirc,start_pos[0] + stride_x * 10, start_pos[1] + stride_y * 10, 14,col=100
     PRINT,'Choosing grid dot ten steps away in x- and y- directions;'
     PRINT,'Appropriate dot should be approximately in center of circle. Click on center of dot'
     crs, clickx_3, clicky_3, /Device, /Quiet
     stride_x = (clickx_3 - start_pos[0]) / 10.
     stride_y = (clicky_3 - start_pos[1]) / 10.
-
+    
     FOR stp=11,30 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,/Device
-
+    
     tvcirc,start_pos[0] + stride_x * 30, start_pos[1] + stride_y * 30, 8,col=100
     PRINT,'Choosing grid dot twenty steps away in x- and y- directions;'
     PRINT,'Appropriate dot should be approximately in center of circle. Click on center of dot'
     crs, clickx_4, clicky_4, /Device, /Quiet
     stride_x = (clickx_4 - start_pos[0]) / 30.
     stride_y = (clicky_4 - start_pos[1]) / 30.
-
+    
     step_size = [stride_x, stride_y]
     TVLCT,rrct,ggct,bbct
     dot_spacing_type = 'bootstrapped'
-ENDIF ELSE BEGIN
-    IF N_ELEMENTS(step_size) LT 2 THEN step_size = step_size_default
+ENDIF ELSE IF Keyword_Set(fft_spacing) THEN BEGIN
+    step_size = step_size_default
+    dot_spacing_type = 'FFT-determined'
+ENDIF ELSE IF N_ELEMENTS(step_size) EQ 2 THEN BEGIN
+    step_size = step_size
     dot_spacing_type = 'user-input'
+ENDIF ELSE BEGIN 
+    step_size = step_size_default
+    dot_spacing_type = 'default'
 ENDELSE
+
 IF verbose GE 1 THEN PRINT,'Using ' + dot_spacing_type + ' [x,y] dot spacing of ' + STRING(step_size,FORMAT='("[", F7.4, ", ", F7.4, "].")')
 
 IF N_ELEMENTS(radius_guess) LT 1        THEN radius_guess = MEAN(step_size) * 0.25
