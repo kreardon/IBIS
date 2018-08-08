@@ -1,22 +1,97 @@
-PRO average_series_images, datapath, datatype, detector_name, skip_series=skip_series
+PRO average_series_images, datapath, datatype, detector_name, skip_series=skip_series, $
+        basedir_root=basedir_root, data_mask=data_mask, write_output_files=write_output_files
+;-------------------------------------------------------------
+;+
+; NAME: average_series_images
+;
+; PURPOSE: makes suitable averages of images taken in IBIS data series
+;
+; CATEGORY:
+; CALLING SEQUENCE:
+;       average_series_images, data_location, series_type, channel_id
+; INPUTS:
+;       data_location = the path to the directory storing the series data
+;       series_type   = the type of calibration or data series (see list below)
+;       channel_id    = the choice of whitelight or narrowband (or andor1 or andor2)
+; KEYWORD PARAMETERS:
+;       skip_series   = identifiers of series_ids that should be skipped (e.g. '20180406_150115')
+;       basedir_root  = a base directory in which to sort for the series data
+;                       [default = current directory]
+;       data_mask     = the binary mask, with the same dimension as the input images, that defines
+;                       the area to be averaged over for the image statistics
+;       write_output  = controls whether individual save files are created for each averaged series
+;                       [default = yes]
+; OUTPUTS:
+;       summed outputs and information on all images in series are written to an IDL SAVE file:
+;           [series_type].[channel_id].[summing_approach].[series_id].series.ave.sav
+; COMMON BLOCKS:
+;
+; NOTES:
+;
+;       The program assumes the data to be stored in a directory tree that is the same
+;           as written at the DST [basedir/andor1/identifier/date/series_type/series_id/]
+;           or as stored locally  [basedir/channel/series_type/series_id]
+;
+;       Search directory for series data is constructed as follows:
+;           basedir_root + Detector + '/' + datapath + '/' + series_type + '/20*_*'
+;
+;       So for data on the DST machines the following variables would be used:
+;           basedir_root='/net/nfserver/export/dstdata/' and 
+;           channel_id='andor[12]'
+;           datapath='T12343/01Apr2018'
+;       Whereas for data stored on a local machine, the following approach would be used:
+;           basedir_root='/data/path/IBIS/obs/date/'
+;           channel_id='whitelight' or 'spectral'
+;           datapath='./'
+;
+;       Recognized series types are:
+;       series_type = 'DarkCalibration'
+;                     'FlatFieldCalibration'
+;                     'GridImages'
+;                     'TargetImages'
+;                     'OtherCalibration'
+;                     'ScienceObservation'
+;
+;        The program makes some assumptions about how different series types in 
+;            different channels should be summed. For example, sum narrowband flatfield images
+;            by filter, wavelength, and modulation state, but for whitelight sum all 
+;            flatfield images, regardless of wavelength.
+;
+;        The program assumes the summed data are 1000x1000 pixel images (i.e. IBIS standard).
+;
+;        The outputs save in the file can be a bit cryptic...
+;            series_ave - suitable summed images for each series = FLTARR(nx,ny,num_unique)
+;            series_cnt - number of images summed for each x-y plane in series_ave
+;            series_ave_input - array of information about images used in average
+;            series_ave_stats - mean, median, min, max, rms for each input image in series
+;            images_info - filename and extension corresponding to each input image
+;            headers_all - FITS header corresponding to each input image
+;            vee_log - parsed VEE log for each series
+;
+;
+; MODIFICATION HISTORY:
+;       K. Reardon, May 2016 -- Initial Implementation
+;       K. Reardon, Aug 2018 -- documentation, clean up
+;-
+;-------------------------------------------------------------
 
-;datapath  = T110820Apr2017
 
-;DataTypes = 'DarkCalibration'
-;DataTypes = 'FlatFieldCalibration'
-;DataTypes = 'GridImages'
-;DataTypes = 'TargetImages'
-;DataTypes = 'OtherCalibration'
+IF NOT KEYWORD_SET(basedir_root) THEN basedir_root = './'
+
 IF NOT KEYWORD_SET(datatype) THEN DataTypes = 'DarkCalibration' ELSE DataTypes = datatype
 
-;Detector  = 'andor1'
 IF NOT KEYWORD_SET(detector_name) THEN Detector = 'andor1' ELSE Detector = detector_name
 
-IF Detector EQ 'andor1' THEN Channel = 'spectral'
-IF Detector EQ 'andor2' THEN Channel = 'whitelight'
+; if input channel_id is the detector name, change it to the channel type
+IF (Detector EQ 'andor1') or (Detector EQ 'spectral') THEN Channel = 'spectral'
+IF (Detector EQ 'andor2') or (Detector EQ 'whitelight')  THEN Channel = 'whitelight'
 
-data_mask = BYTARR(1000,1000)
-data_mask(50:950,50:950) = 1
+IF NOT KEYWORD_SET(data_mask) THEN BEGIN 
+    data_mask = BYTARR(1000,1000)
+    data_mask(50:950,50:950) = 1
+ENDIF
+
+IF N_ELEMENTS(write_output_files) EQ 0 THEN do_write=1 ELSE do_write=KEYWORD_SET(write_output_files)
 
 CASE DataTypes OF
     'DarkCalibration'      : selection_mode        = 'combineall'
@@ -27,11 +102,8 @@ CASE DataTypes OF
     'ScienceObservation'   : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter+wave' ELSE selection_mode = 'combineall'
     ELSE                   : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
 ENDCASE
-;selection_mode        = 'byfilter+wave'
-;selection_mode        = 'byfilter'
-;selection_mode        = 'combineall'
 
-basedir = '/net/bonneville/export/dstdata/' + Detector + '/' + datapath + '/'
+basedir =  basedir_root + Detector + '/' + datapath + '/'
 data_series_all = FILE_SEARCH(basedir + DataTypes + '/201*_*',count=num_series)
 
 data_series_cor = data_series_all
@@ -46,9 +118,6 @@ num_series = N_ELEMENTS(data_series_cor)
 data_series = data_series_cor
 print,'Found the following data series -'
 print,FORMAT='("    ",A0)',data_series
-
-;num_series = 1
-do_write = 1
 
 modulation_options = ['I', 'I+Q', 'I+U', 'I+V', 'I-Q', 'I-U', 'I-V', '4S1', '4S2', '4S3', '4S4']
 
