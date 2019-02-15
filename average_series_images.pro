@@ -91,6 +91,8 @@ IF NOT KEYWORD_SET(data_mask) THEN BEGIN
     data_mask(50:950,50:950) = 1
 ENDIF
 
+IF N_ELEMENTS(do_linearity_correction) LT 1 THEN do_linearity_correction = 0
+
 IF N_ELEMENTS(write_output_files) EQ 0 THEN do_write=1 ELSE do_write=KEYWORD_SET(write_output_files)
 
 CASE DataTypes OF
@@ -155,23 +157,35 @@ FOR ds=0,num_series-1 DO BEGIN
     series_cnt_log = INTARR(num_uniq)
     FOR nn=0,num_uniq - 1 DO series_cnt_log(nn) = TOTAL((series_combo EQ series_uniq(nn)))
 
-    data_files = FILE_SEARCH(data_series[ds],'s*fits*',COUNT=num_data_files)
+    data_files = FILE_SEARCH(data_series[ds],'*fits*',COUNT=num_data_files)
     ;sometimes it's necessary do skip a data file on an adhoc basis
     ;data_files = data_files[0:8]
     num_data_files = N_ELEMENTS(data_files)
 
     fits_open,data_files(0),fcb
-    fits_read,fcb,main_data,main_header,exten=0
-    fits_read,fcb,data,header,exten=1
+    fits_read,fcb,data,main_header,exten=0
+
+    ; test to see if the data files are the "modern" version with extensions
+    ; otherwise we'll stick with the data and header from above
+    num_exten = fcb.NEXTEND
+    ; even a file without extensions has one image in the file
+    images_per_file = MAX([1,num_exten])
+    IF num_exten GE 1 THEN BEGIN
+        fits_read,fcb,data,header,exten=1
+        files_have_extensions = 1
+        hdrsiz = SIZE([main_header, header])
+    ENDIF ELSE BEGIN
+        files_have_extensions = 0
+        hdrsiz = SIZE([main_header])
+    ENDELSE
     FITS_CLOSE,fcb
     imsiz = SIZE(data)
-    hdrsiz = SIZE([main_header, header])
 
     series_ave = FLTARR(imsiz(1),imsiz(2),num_uniq)
     series_ave_input = STRARR(8, num_uniq, MAX(series_cnt_log))
     series_ave_stats = STRARR(5, num_uniq, MAX(series_cnt_log))
-    images_info = STRARR(2,fcb.NEXTEND, num_data_files)
-    headers_all = STRARR(hdrsiz(1),fcb.NEXTEND,num_data_files)
+    images_info = STRARR(2, images_per_file, num_data_files)
+    headers_all = STRARR(hdrsiz(1), images_per_file, num_data_files)
     series_ave_wv = FLTARR(num_uniq)
     series_ave_mod = STRARR(num_uniq)
     series_seq	   = FLTARR(1000,1000,num_data_files)
@@ -180,28 +194,39 @@ FOR ds=0,num_series-1 DO BEGIN
     data_includes_bias = 1
     data_bias	       = 307
 
-
     FOR fil=0,num_data_files-1 DO BEGIN
         data_file_info = file_info(data_files(fil))
         IF data_file_info.size GE 2880 THEN BEGIN
 	fits_open,data_files(fil),fcb
-        IF data_file_info.size GE fcb.NEXTEND * 2e6 THEN BEGIN
+        IF data_file_info.size GE images_per_file * 2e6 THEN BEGIN
 	fits_read,fcb,main_data,main_header,exten_no=0
 	;lun = fxposit(data_files[fil],0,/ReadOnly)
 	;nodata = mrdfits(lun, 0, main_header, status=status,/SILENT)
 	camera_id	   = SXPAR(main_header,'SER_NUM', /SILENT)
-	print,'    ' + data_files(fil)
+	IF num_exten GE 1 THEN print,'    ' + data_files(fil)
 	
+	;FOR ext=1,fcb.NEXTEND DO BEGIN
+	FOR imnum=1,images_per_file DO BEGIN
+            
+            IF num_exten GE 1 THEN BEGIN
+                ext = imnum
+                imidx = ext - 1
+                fits_read,fcb,data,header,exten=ext,/NOSCALE
+                header_combo = [main_header, header]
+            ENDIF ELSE BEGIN
+                ext = 0
+                imidx = 0
+                fits_read,fcb,data,header,exten_no=ext,/NOSCALE
+                header_combo = [header]
+            ENDELSE
 
-	FOR ext=1,fcb.NEXTEND DO BEGIN
-            fits_read,fcb,data,header,exten=ext,/NOSCALE
             IF N_ELEMENTS(data) GE 1000 THEN status=1
             ;data = mrdfits(lun, 0, header, status=status,/SILENT)
             ; if status from mrdfits is less than zero, no data was read, so skip this extension
             IF status GE 0 THEN BEGIN
 		data_date	   = SXPAR(header, 'DATE-OBS', /SILENT)
 		linearity_corrected = 0
-		IF (camera_id EQ 2748) THEN BEGIN
+		IF (camera_id EQ 2748) AND (do_linearity_correction EQ 1) THEN BEGIN
 		    data = ibis_linearity_correction_andor(data, camera_id=camera_id, $
                                                      data_date=data_date, verbose=verbose, $
                                                      data_includes_bias=data_includes_bias,data_bias=data_bias, $
@@ -235,18 +260,18 @@ FOR ds=0,num_series-1 DO BEGIN
 
 		;IF im_match EQ 12 THEN series_seq(*,*,series_cnt(im_match)) = data
 		series_cnt(im_match)	 += 1
-		images_info(*,ext-1,fil) = [data_files(fil), STRTRIM(ext,2)]
-		headers_all(*,ext-1,fil) = [main_header, header]
-            ENDIF
-	ENDFOR
+		images_info(*,imidx,fil) = [data_files(fil), STRTRIM(ext,2)]
+		headers_all(*,imidx,fil) = header_combo
+            ENDIF   ; status > 0
+	ENDFOR      ; imnum loop
 	FITS_CLOSE,fcb
 	;Free_LUN,lun
 	TV,GmaScl(series_ave(*,*,0),gamma=4)
 
-        ENDIF
-        ENDIF
+        ENDIF    ; data_file_info.size = 2MB / image
+        ENDIF    ; data_file_info.size > 2880 bytes
 
-    ENDFOR
+    ENDFOR       ; data file loop
 
     FOR unq=0,num_uniq-1 DO BEGIN
 	series_ave(*,*,unq) /= series_cnt(unq)
@@ -262,7 +287,7 @@ FOR ds=0,num_series-1 DO BEGIN
              series_ave, series_cnt, series_ave_input, series_ave_stats, images_info, headers_all,vee_log, /COMP
    ENDIF
 
-ENDFOR
+ENDFOR  ; num_series
 
 END
 
