@@ -293,7 +293,7 @@ flat_file_nb = File_Search(ave_ser_dir,'FlatFieldCalibration.' + narrowband_tag 
         nb_gain_info = CREATE_STRUCT(  'flat_file',       flat_file_nb, $
                                         'wavelengths',    flat_waves, $
                                         'bad_pixels',     bad_pix, $
-                                        'prefilter_profile', prefilt, $
+                                        'prefilter_profile', prefilter, $
                                         'frame_transfer', 'not corrected',$
                                         'linearity',      'corrected',$
                                         'fringe_fft',     'corrected',$

@@ -2,7 +2,7 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
              bootstrap=bootstrap, sobel_cutoff=sobel_cutoff, verbose=verbose, data_mask=data_mask, $
              dot_pos_map=dot_pos_map, rotation_grid=rotation_grid,fft_spacing=fft_spacing,$
             fix_radius=fix_radius,radius_guess=radius_guess,arcsec_step=arcsec_step, $
-            correlation_refine=correlation_refine, num_steps=num_steps
+            correlation_refine=correlation_refine, num_steps=num_steps, dot_im_ave=dot_im_ave
 
 ;+
 ; NAME:
@@ -200,7 +200,8 @@ IF Keyword_Set(bootstrap) THEN BEGIN
     stride_x = (clickx_2 - start_pos[0]) / 2.
     stride_y = (clicky_2 - start_pos[1]) / 2.
         
-    FOR stp=1,10 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,SymSize=2,/Device
+;    FOR stp=1,10 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,SymSize=2,/Device
+    FOR stp=1,10 do Tvcircle,5,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,'red3',th=2,SymSize=2,/Device
     
     ;tvcirc,start_pos[0] + stride_x * 10, start_pos[1] + stride_y * 10, 14,col=100
     Tvcircle, 14, start_pos[0] + stride_x * 10, start_pos[1] + stride_y * 10, 100, /Device
@@ -213,7 +214,8 @@ IF Keyword_Set(bootstrap) THEN BEGIN
     stride_x = (clickx_3 - start_pos[0]) / 10.
     stride_y = (clicky_3 - start_pos[1]) / 10.
     
-    FOR stp=11,30 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,/Device
+    ;FOR stp=11,30 do plots,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,psym=1,col=50,th=2,/Device
+    FOR stp=11,30 do Tvcircle,5,start_pos[0] + stride_x * stp, start_pos[1] + stride_y * stp,'red3',th=2,/Device
     
     ;tvcirc,start_pos[0] + stride_x * 30, start_pos[1] + stride_y * 30, 8,col=100
     Tvcircle, 8, start_pos[0] + stride_x * 30, start_pos[1] + stride_y * 30, 100, /Device
@@ -364,7 +366,7 @@ trend_y_fit       = LinFit(rebin(dot_pos(*,*,0),num_steps[0],1,1),trend_y)
 trend_x_fit       = LinFit(rebin(dot_pos(*,*,1),1,num_steps[1],1),trend_x)
 yangle            = - ATAN(trend_x_fit[1]) * !RADEG
 xangle            =   ATAN(trend_y_fit[1]) * !RADEG
-rotation_grid     = [xangle, xangle]
+rotation_grid     = [xangle, yangle]
 
 step_size         = [step_x_xaxis_ave, step_y_yaxis_ave]
 dot_pos_map       = dot_pos
