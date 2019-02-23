@@ -127,6 +127,7 @@ modulation_options = ['I', 'I+Q', 'I+U', 'I+V', 'I-Q', 'I-U', 'I-V', '4S1', '4S2
 FOR ds=0,num_series-1 DO BEGIN
     vee_log        = read_vee_log( FILE_SEARCH(data_series[ds],'log*txt') )
     wavelen        = vee_log.wavelength
+    images_per_seq = vee_log.images_per_seq
     filter_pos     = vee_log.filter_wheelpos
     modulation     = vee_log.modulation
     modulation_num = INTARR(N_ELEMENTS(modulation)) - 1
@@ -275,6 +276,12 @@ FOR ds=0,num_series-1 DO BEGIN
     FOR unq=0,num_uniq-1 DO BEGIN
 	series_ave(*,*,unq) /= series_cnt(unq)
     ENDFOR
+
+    ; If we are dealing with the single images per file, we would like to rewrap the header info into 
+    ; into [num_sequences, num_series] order
+    IF (num_exten LT 1) AND (num_data_files MOD images_per_seq EQ 0) THEN BEGIN
+        headers_all = REFORM(headers_all,hdrsiz(1),images_per_seq,FIX(num_data_files/images_per_seq))
+    ENDIF
 
     IF do_write THEN BEGIN
 	series_split = (STRSPLIT(data_series[ds],'/',/EXTRACT))
