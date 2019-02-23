@@ -83,6 +83,7 @@ IF NOT KEYWORD_SET(datatype) THEN DataTypes = 'DarkCalibration' ELSE DataTypes =
 IF NOT KEYWORD_SET(detector_name) THEN Detector = 'andor1' ELSE Detector = detector_name
 
 ; if input channel_id is the detector name, change it to the channel type
+Channel = 'spectral'    ; default value if none of the following conditionals match
 IF (Detector EQ 'andor1') or (Detector EQ 'spectral') THEN Channel = 'spectral'
 IF (Detector EQ 'andor2') or (Detector EQ 'whitelight')  THEN Channel = 'whitelight'
 
@@ -97,12 +98,12 @@ IF N_ELEMENTS(write_output_files) EQ 0 THEN do_write=1 ELSE do_write=KEYWORD_SET
 
 CASE DataTypes OF
     'DarkCalibration'      : selection_mode        = 'combineall'
-    'FlatFieldCalibration' : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter+wave' ELSE selection_mode = 'combineall'
-    'GridImages'           : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
-    'TargetImages'         : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
-    'OtherCalibration'     : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
-    'ScienceObservation'   : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter+wave' ELSE selection_mode = 'combineall'
-    ELSE                   : IF Detector EQ 'andor1' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
+    'FlatFieldCalibration' : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter+wave' ELSE selection_mode = 'combineall'
+    'GridImages'           : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
+    'TargetImages'         : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
+    'OtherCalibration'     : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
+    'ScienceObservation'   : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter+wave' ELSE selection_mode = 'combineall'
+    ELSE                   : IF Channel EQ 'spectral' THEN selection_mode = 'byfilter' ELSE selection_mode = 'combineall'
 ENDCASE
 
 basedir =  basedir_root + Detector + '/' + datapath + '/'
@@ -188,7 +189,6 @@ FOR ds=0,num_series-1 DO BEGIN
     headers_all = STRARR(hdrsiz(1), images_per_file, num_data_files)
     series_ave_wv = FLTARR(num_uniq)
     series_ave_mod = STRARR(num_uniq)
-    series_seq	   = FLTARR(1000,1000,num_data_files)
     incnt = 0
 
     data_includes_bias = 1
@@ -258,7 +258,6 @@ FOR ds=0,num_series-1 DO BEGIN
 	        ibis_area_statistics,data,data_mask,all_stats=image_stats
 		series_ave_stats(*,im_match, series_cnt(im_match)) =  image_stats[0:4]
 
-		;IF im_match EQ 12 THEN series_seq(*,*,series_cnt(im_match)) = data
 		series_cnt(im_match)	 += 1
 		images_info(*,imidx,fil) = [data_files(fil), STRTRIM(ext,2)]
 		headers_all(*,imidx,fil) = header_combo
