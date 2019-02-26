@@ -7,11 +7,13 @@ load_data       = 1
 run_grid_check  = 1
 do_save_results = 1
 
-basedir = '/Users/kreardon/IBIS/ALMA-2016/Reardon/23Apr2017/'
-date_str = '23Apr2017'
-;channel  = 'whitelight'
-channel  = 'spectral'
-nb_wavelength = '6173'
+basedir = '/SMdata1/kreardon/IBIS/VAULT/30Sep2014/ibis/'
+ave_ser_dir = basedir + 'averaged_series'
+date_str = '30Sep2014'
+channel  = 'whitelight'
+;channel  = 'spectral'
+nb_wavelength = '7090'
+dot_grid_series = '20140930_201441'
 
 ; it might be preferred to specify the number of grid points to optimize the coverage (or avoid extra points at the edges).
 num_steps = [49,49]
@@ -20,11 +22,41 @@ num_steps = [49,49]
 IF load_data THEN BEGIN
     CASE channel OF
     'whitelight' : BEGIN
-        RESTORE,verbose=0,basedir + 'DarkCalibration.whitelight.combineall.20170423_211809.series.ave.sav'
-        wl_dark_ave = Series_Ave
-        restore,verbose=0,'GridImages.whitelight.combineall.20170423_202240.series.ave.sav'
+        dark_wl_files      = file_search(ave_ser_dir,'DarkCalibration.whitelight.combineall.' + day_id + '*.series.ave.sav', count=num_darks)     
+        wl_darks_all       = FLTARR(1000,1000,num_darks) 
+        wl_darks_timerange = DBLARR(2,num_darks)
+        FOR nn=0,num_darks-1 DO BEGIN
+            RESTORE,Verbose=0,dark_wl_files[nn]
+            wl_darks_all[*,*,nn]      = Series_Ave
+            validp                    = (WHERE(strlen(Series_Ave_Input[5,*,*]) GE 1))
+            wl_darks_timerange[*,nn]  = [MIN(fits_date_convert((SERIES_AVE_INPUT[5,*,*])[validp]),max=maxval),maxval]
+        ENDFOR
+
+        flat_wl_files      = file_search(ave_ser_dir,'FlatFieldCalibration.whitelight.combineall.' + day_id + '*.series.ave.sav', count=num_flats)     
+        wl_flats_all       = FLTARR(1000,1000,num_flats) 
+        wl_flats_timerange = DBLARR(2,num_flats)
+        FOR nn=0,num_flats-1 DO BEGIN
+            RESTORE,Verbose=0,flat_wl_files[nn]
+            wl_flats_all[*,*,nn]      = Series_Ave
+            validp                    = (WHERE(strlen(Series_Ave_Input[5,*,*]) GE 1))
+            wl_flats_timerange[*,nn]  = [MIN(fits_date_convert((SERIES_AVE_INPUT[5,*,*])[validp]),max=maxval),maxval]
+            dark_match                = get_closest(REBIN(wl_darks_timerange,1,num_darks),MEAN(wl_flats_timerange[*,nn]))
+            wl_flats_all[*,nn]       -= wl_darks_all[*,*,dark_match]
+            wl_flats_all[*,nn]       /= MEDIAN(wl_flats_all[*,nn])
+        ENDFOR
+        
+        dot_grid_file = file_search(ave_ser_dir,'GridImages.whitelight.combineall*' + dot_grid_series + '*.series.ave.sav', count=num_darks) 
+        restore,verbose=0,dot_grid_file[0]
+
         wl_grid_info = Images_info
         wl_grid_ave = Series_Ave
+
+        validp                    = (WHERE(strlen(Series_Ave_Input[5,0,*]) GE 1))
+        wl_grid_timerange[*,nn]   = [MIN(fits_date_convert((SERIES_AVE_INPUT[5,*,*])[validp]),max=maxval),maxval]
+        dark_match                = get_closest(REBIN(wl_darks_timerange,1,num_darks),MEAN(wl_grid_timerange[*,nn]))
+        wl_grid_ave              -= wl_darks_all[*,*,dark_match]
+        flat_match                = get_closest(REBIN(wl_flats_timerange,1,num_flats),MEAN(wl_grid_timerange[*,nn]))
+        wl_grid_ave              /= wl_flats_all[*,*,flat_match]
         
         wl_cal_params = load_alma_calibration_info(date_str, 'ibis_wl')
         ibis_grid_use       = wl_grid_ave
