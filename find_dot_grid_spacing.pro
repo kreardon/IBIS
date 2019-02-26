@@ -2,7 +2,7 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
              bootstrap=bootstrap, sobel_cutoff=sobel_cutoff, verbose=verbose, data_mask=data_mask, $
              dot_pos_map=dot_pos_map, rotation_grid=rotation_grid,fft_spacing=fft_spacing,$
             fix_radius=fix_radius,radius_guess=radius_guess,arcsec_step=arcsec_step, $
-            correlation_refine=correlation_refine, num_steps=num_steps, dot_im_ave=dot_im_ave
+            correlation_refine=correlation_refine, num_steps=num_steps, dot_im_ave=dot_im_ave, reset=reset
 
 ;+
 ; NAME:
@@ -31,19 +31,23 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
 ;        data_mask     = a mask, the same size as the input image, to apply to the input image in
 ;                            order to eliminate points (e.g. the edges of the field) that might confuse
 ;                            the fitting algorithm
-;        fix_radius    = use a fixed radius for the circle fitting routine
-;        radius_guess  = initial guess for radius of dots
-;        arcsec_step   = value to use for grid dot separation in arcseconds 
-;                            [default = 1.88" suitable for 0.5 mm grid at DST]
-;        verbose       = print more detailed information during and at end of fitting process
-;        sobel_cutoff  = the input threshold to be applied to the image to define the 
-;                            circle points around each dot to which to apply the fit
-;        correlation_refine = [default=yes] use cross-correlation of the individual dot cutouts with
-;                                 with the average dot image in order to better refine the dot positions.
 ;        num_steps     = two-element array used to manually set the number of dots that are fitted across
 ;                            the image. Can be used if the automatic determination of the number of dots 
 ;                            is too low (dots at the edge of the field are not fit) or 
 ;                            too high (dots do not fully fill the field of view).
+;        verbose       = print more detailed information during and at end of fitting process
+;        reset         = ignore any input values for start_pos_dot and step_size and recalculate
+; 
+;     In most cases, users shouldn't have to use the following parameters.
+;
+;        fix_radius    = use a fixed radius for the circle fitting routine
+;        radius_guess  = initial guess for radius of dots
+;        arcsec_step   = value to use for grid dot separation in arcseconds 
+;                            [default = 1.88" suitable for 0.5 mm grid at DST]
+;        sobel_cutoff  = the input threshold to be applied to the image to define the 
+;                            circle points around each dot to which to apply the fit
+;        correlation_refine = [default=yes] use cross-correlation of the individual dot cutouts with
+;                                 with the average dot image in order to better refine the dot positions.
 ;                                 
 ; KEYWORDS (Output):
 ;        dot_pos_map   = the map of [x,y,radius] parameters for all the fitted dots
@@ -67,9 +71,11 @@ FUNCTION find_dot_grid_spacing, grid_image_input, start_pos_dot=start_pos_dot, s
 
 IF N_ELEMENTS(bootstrap) NE 1           THEN bootstrap = 0
 IF N_ELEMENTS(verbose) LT 1             THEN verbose = 0
-IF N_ELEMENTS(sobel_hist_limit) LT 1    THEN  sobel_hist_limit = 0.9
+IF N_ELEMENTS(sobel_hist_limit) LT 1    THEN sobel_hist_limit = 0.9
 IF N_ELEMENTS(correlation_refine) LT 1  THEN correlation_refine = 1
 IF N_ELEMENTS(fix_radius)   LT 1        THEN fix_radius   = 1
+IF KEYWORD_SET(reset)                   THEN step_size = 0
+IF KEYWORD_SET(reset)                   THEN start_pos_dot = 0
 
 do_sobel_trend_correction = 0
 
