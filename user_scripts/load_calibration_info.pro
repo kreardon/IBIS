@@ -1,4 +1,4 @@
-FUNCTION load_alma_calibration_info, date_str, instrument_channel
+FUNCTION load_calibration_info, date_str, instrument_channel
 
 ; sample usage:
 ; nb_21apr_info = load_alma_calibration_info('21Apr2017','ibis_nb') 
@@ -19,19 +19,20 @@ calibration_location = repository_location + 'calibration_files/'
     num_minutes   = 300
     time_start    = 14.5
     time_axis_min = (DINDGEN(num_minutes)/60.) + time_start
-    time_ref      = (fits_date_convert('2017-04-21T15:00:00'))[0]
+    time_ref      = (fits_date_convert('2014-09-30T14:30:00'))[0]
 
     rot_grid_to_sol_north = [[time_ref],[-0.48]]
 
-    scale_ibis_wl     = [ 0.09668, 0.09680 ]
-    rot_ibis_wl       = [ -0.56 ]
+    ;scale_ibis_wl     = [ 0.09668, 0.09680 ]
+    scale_ibis_wl     = [ 0.09074, 0.09295 ]
+    rot_ibis_wl       = [ 0.57 ]
 
-    ;scale_ibis_8542   = [0.09775, 0.09761, 8542]
-    ;scale_ibis_7090   = [0.09775, 0.09758, 7090]
-    ;scale_ibis_6563   = [0.09752, 0.09736, 6563]
-    ;scale_ibis_5876   = [0.09738, 0.09721, 5876]
-    ;scale_ibis_nb     = [[scale_ibis_5876],[scale_ibis_6563],[scale_ibis_7090],[scale_ibis_8542]]
-    ;rot_ibis_nb       = [ -0.62 ]
+    scale_ibis_8542   = [0.09539, 0.09749, 8542]
+    scale_ibis_7090   = [0.09544, 0.09751, 7090]
+    scale_ibis_6563   = [0.09533, 0.09742, 6563]
+    scale_ibis_5876   = [0.09494, 0.09707, 5876]
+    scale_ibis_nb     = [[scale_ibis_5876],[scale_ibis_6563],[scale_ibis_7090],[scale_ibis_8542]]
+    rot_ibis_nb       = [ 0.18 ]
     
     shift_ibis_wl_even = [0, 0]
     shift_ibis_nb_even = [0, 0]  
