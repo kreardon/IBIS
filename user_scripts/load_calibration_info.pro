@@ -19,12 +19,14 @@ calibration_location = repository_location + 'calibration_files/'
     num_minutes   = 300
     time_start    = 14.5
     time_axis_min = (DINDGEN(num_minutes)/60.) + time_start
-    time_ref      = (fits_date_convert('2014-09-30T14:30:00'))[0]
+    time_ref      = (fits_date_convert('2014-09-30T18:00:00'))[0]
 
-    rot_grid_to_sol_north = [[time_ref],[-0.48]]
+    rot_grid_to_sol_north = [[time_ref],[-0.249]]
+    rot_wl_to_sol_north   = [[time_ref],[0.321]]    ; determined from fitting to HMI
 
     ;scale_ibis_wl     = [ 0.09668, 0.09680 ]
-    scale_ibis_wl     = [ 0.09074, 0.09295 ]
+    ;scale_ibis_wl     = [ 0.09074, 0.09295 ]  ; determined from dot grid
+    scale_ibis_wl     = [ 0.09099, 0.09312 ]   ; determined from fitting to HMI, about 0.2% larger
     rot_ibis_wl       = [ 0.57 ]
 
     scale_ibis_8542   = [0.09539, 0.09749, 8542]
