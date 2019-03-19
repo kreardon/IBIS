@@ -7,13 +7,14 @@ load_data       = 1
 run_grid_check  = 1
 do_save_results = 1
 
-basedir       = '/SMdata1/kreardon/IBIS/VAULT/30Sep2014/ibis/'
+;basedir       = '/SMdata1/kreardon/IBIS/VAULT/30Sep2014/ibis/'
+basedir       = '/Users/kreardon/IBIS/VAULT/IBIS/'
 ave_ser_dir   = basedir + 'averaged_series'
 date_str      = '30Sep2014'
 day_id        = '20140930'
-channel       = 'whitelight'
-;channel       = 'spectral'
-;nb_wavelength = '7090'
+;channel       = 'whitelight'
+channel       = 'spectral'
+nb_wavelength = '7090'
 dot_grid_series = '20140930_201441'
 
 ; it might be preferred to specify the number of grid points to optimize the coverage (or avoid extra points at the edges).
@@ -74,7 +75,7 @@ IF load_data THEN BEGIN
    
       end
     'spectral' : begin
-        dark_nb_files      = file_search(ave_ser_dir,'darkcalibration.spectral.combineall.' + day_id + '*.series.ave.sav', count=num_darks)     
+        dark_nb_files      = file_search(ave_ser_dir,'DarkCalibration.spectral.combineall.' + day_id + '*.series.ave.sav', count=num_darks)     
         nb_darks_all       = fltarr(1000,1000,num_darks) 
         nb_darks_timerange = dblarr(2,num_darks)
         for nn=0,num_darks-1 do begin
@@ -86,7 +87,7 @@ IF load_data THEN BEGIN
 
         flat_nb_files      = file_search(ave_ser_dir,'flatfieldcalibration.spectral.byfilter+wave.' + day_id + '*.series.ave.sav', count=num_flats)     
         
-        dot_grid_file = file_search(ave_ser_dir,'gridimages.spectral.byfilter*' + dot_grid_series + '*.series.ave.sav', count=num_darks) 
+        dot_grid_file = file_search(ave_ser_dir,'GridImages.spectral.byfilter*' + dot_grid_series + '*.series.ave.sav', count=num_darks) 
         restore,verbose=0,dot_grid_file[0]
 
         nb_grid_info  = images_info
@@ -193,7 +194,7 @@ ENDIF
 IF run_grid_check  THEN BEGIN
     grid_im_even_reg = doreg(grid_im_rot, dot_pos_rdisp_even, dot_pos_disp_even) 
     hh2 = find_dot_grid_spacing(grid_im_even_reg,start_pos_dot=-1,$
-              step_size=[step_size_even,step_size_even],verbose=1,bootstrap=0,dot_pos_map=dot_pos_map,num_steps=num_steps-[1,1])
+              step_size=[step_size_even,step_size_even],verbose=1,bootstrap=1,dot_pos_map=dot_pos_map,num_steps=num_steps-[1,1])
 
 ENDIF
 
