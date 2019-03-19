@@ -4,7 +4,7 @@ FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavel
 IF NOT KEYWORD_SET(rotate_array) THEN rotate_array='solar_north'
 IF NOT KEYWORD_SET(target_scale) THEN target_scale=0.096
 
-IF StrMatch(channel,'*nb*') THEN channel_id = 'nb' ENDIF ELSE channel_id = 'wl'
+IF StrMatch(channel,'*nb*') THEN channel_id = 'nb' ELSE channel_id = 'wl'
 
 cal_params = load_calibration_info(date_str, 'ibis_' + channel_id)
 
@@ -40,7 +40,7 @@ ENDIF ELSE IF (size(rotate_array,/str)).TYPE_NAME NE 'STRING' THEN BEGIN
     image_array = ROT(image_array,rotate_array,CUBIC=-0.5)
 ENDIF
 
-IF channel_id = 'wl' THEN BEGIN
+IF channel_id EQ 'wl' THEN BEGIN
     plate_scale_im = cal_params.plate_scale[0:1]
 ENDIF ELSE BEGIN
     ;filter_idx_select = where(cal_params.filter_ids eq wavelength)
