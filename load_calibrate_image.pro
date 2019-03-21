@@ -13,31 +13,42 @@ IF NOT Keyword_Set(calibration_location) THEN BEGIN
     calibration_location = repository_location + 'calibration_files/'
 ENDIF
 
-IF N_ELEMENTS(dark_file) EQ 1 THEN dark_file_valid = FILE_TEST(dark_file) ELSE dark_file_valid=0
-IF N_ELEMENTS(gain_file) EQ 1 THEN gain_file_valid = FILE_TEST(gain_file) ELSE gain_file_valid=0
+IF N_ELEMENTS(dark_file) EQ 1 THEN dark_file_use = dark_file ELSE dark_file_use = cal_params.dark_file
+dark_file_valid = FILE_TEST(dark_file_use)
+IF FILE_TEST(calibration_location) THEN dark_file_use = calibration_location + '/' + dark_file_use
+IF N_ELEMENTS(gain_file) EQ 1 THEN gain_file_use = gain_file ELSE gain_file_use = cal_params.gain_file
+gain_file_valid = FILE_TEST(gain_file_use)
+IF FILE_TEST(calibration_location) THEN gain_file_use = calibration_location + '/' + gain_file_use
 
 IF dark_file_valid NE 1 THEN BEGIN
     dark_files = File_Search(calibration_location,'*dark*' + channel_id + '*', count=dark_count)
-    dark_file  = dark_files[0]
+    dark_file_use  = dark_files[0]
 ENDIF
 
 IF gain_file_valid NE 1 THEN BEGIN
     gain_files = File_Search(calibration_location,'*gain*' + channel_id + '*', count=dark_count)
-    gain_file  = gain_files[0]
+    gain_file_use  = gain_files[0]
 ENDIF
 
-RESTORE,/VE,dark_file
-RESTORE,/VE,gain_file
+RESTORE,/VE,dark_file_use
+RESTORE,/VE,gain_file_use
+
+;wl_dark = wl_dark_ave
+res = EXECUTE('dark_cal = ' + cal_params.dark_name)
+res = EXECUTE('gain_cal = ' + cal_params.gain_name)
 
 image_array = readfits(filename, exten=extension, image_hdr, /Silent)
-image_array = (image_array - wl_dark) / wl_gain
+image_array = (image_array - dark_cal) / wl_gain
 image_array = ROTATE(image_array,cal_params.transpose)
 IF STRMATCH(rotate_array,'*solar*') THEN BEGIN
-    image_array = ROT(image_array,cal_params.rot_to_solnorth,CUBIC=-0.5)
+    image_array = ROT(image_array,cal_params.rot_to_solnorth[1],CUBIC=-0.5)
+    PRINT,'Rotating: ', cal_params.rot_to_solnorth[1]
 ENDIF ELSE IF STRMATCH(rotate_array,'*grid*') THEN BEGIN
-    image_array = ROT(image_array,cal_params.rot_to_grid,CUBIC=-0.5)
+    image_array = ROT(image_array,cal_params.rot_to_grid[0],CUBIC=-0.5)
+    PRINT,'Rotating: ', cal_params.rot_to_grid[0]
 ENDIF ELSE IF (size(rotate_array,/str)).TYPE_NAME NE 'STRING' THEN BEGIN
     image_array = ROT(image_array,rotate_array,CUBIC=-0.5)
+    PRINT,'Rotating: ', rotate_array
 ENDIF
 
 IF channel_id EQ 'wl' THEN BEGIN
@@ -48,7 +59,7 @@ ENDIF ELSE BEGIN
     plate_scale_im = cal_params.plate_scale[0:1, filter_idx_select]
 ENDELSE
 
-target_scale_ratio = target_scale / plate_scale_im
+target_scale_ratio = plate_scale_im / target_scale
 target_scale_pixel = ROUND([1000,1000] * target_scale_ratio)
 target_scale_diff  = target_scale_pixel - [1000,1000]
 image_array        = CONGRID(image_array, target_scale_pixel[0], target_scale_pixel[1], CUBIC=-0.5)

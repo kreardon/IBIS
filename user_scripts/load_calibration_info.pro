@@ -16,6 +16,25 @@ calibration_location = repository_location + 'calibration_files/'
    
 ;'21apr2017' 
 
+    wl_dark_cal_file = 'whitelight.darks.30Sep2014.sav'
+    wl_dark_name     = 'wl_dark_ave'
+    wl_gain_cal_file = 'whitelight.gains.30Sep2014.sav'
+    wl_gain_name     = 'wl_gain'
+
+    nb_dark_cal_file = 'nb.dark.30Sep2014.ave.sav'
+    nb_dark_name     = 'nb_darks'
+    nb_7090_gain_cal_file = ['nb.gain.7090.30Sep2014.ave.sav', 7090]
+    nb_7090_gain_name     = ['nb_gain_7090_ave', 7090]
+    nb_5876_gain_cal_file = ['nb.gain.5876.30Sep2014.ave.sav', 5876]
+    nb_5876_gain_name     = ['nb_gain_5876_ave', 5876]
+    nb_6563_gain_cal_file = ['nb.gain.6563.30Sep2014.ave.sav', 6563]
+    nb_6563_gain_name     = ['nb_gain_6563_ave', 6563]
+    nb_8542_gain_cal_file = ['nb.gain.8542.30Sep2014.ave.sav', 8542]
+    nb_8542_gain_name     = ['nb_gain_8542_ave', 8542]
+
+    nb_gain_cal_file  = [[nb_5876_gain_cal_file], [nb_6563_gain_cal_file], [nb_7090_gain_cal_file], [nb_8542_gain_cal_file]]
+    nb_gain_name      = [[nb_5876_gain_cal_name], [nb_6563_gain_cal_name], [nb_7090_gain_cal_name], [nb_8542_gain_cal_name]]
+
     num_minutes   = 300
     time_start    = 14.5
     time_axis_min = (DINDGEN(num_minutes)/60.) + time_start
@@ -83,7 +102,11 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'rot_to_grid',      rot_ibis_wl, $
                                     'plate_scale',      scale_ibis_wl, $
                                     'shift_even_scale', shift_ibis_wl_even, $
-                                    'hmi_pixel_cutout', hmi_pixel_cutout)
+                                    'hmi_pixel_cutout', hmi_pixel_cutout, $
+                                    'dark_file',        wl_dark_cal_file, $
+                                    'dark_name',        wl_dark_name, $
+                                    'gain_file',        wl_gain_cal_file, $
+                                    'gain_name',        wl_gain_name)
     END
     'ibis_nb' : BEGIN
         rot_to_solnorth_combo[*,1] += rot_ibis_nb[0]
@@ -96,7 +119,11 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'wl_to_nb_drift',  wl_to_nb_drift, $
                                     'wl_drifts',       wl_optical_drifts, $
                                     'atm_dispersion',  atm_dispersion_nb, $
-                                    'filter_ids',      filter_ids)
+                                    'filter_ids',      filter_ids, $
+                                    'dark_file',       nb_dark_cal_file, $
+                                    'dark_name',       nb_dark_name, $
+                                    'gain_file',       nb_gain_cal_file, $
+                                    'gain_name',       nb_gain_name)
     END
 ENDCASE
 
