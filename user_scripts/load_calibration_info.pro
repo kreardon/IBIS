@@ -23,13 +23,13 @@ calibration_location = repository_location + 'calibration_files/'
 
     nb_dark_cal_file = 'nb.dark.30Sep2014.ave.sav'
     nb_dark_name     = 'nb_darks'
-    nb_7090_gain_cal_file = ['nb.gain.7090.30Sep2014.ave.sav', 7090]
+    nb_7090_gain_cal_file = ['nb.gain.7090.30Sep2014.ave.sav', '7090']
     nb_7090_gain_name     = ['nb_gain_7090_ave', 7090]
-    nb_5876_gain_cal_file = ['nb.gain.5876.30Sep2014.ave.sav', 5876]
+    nb_5876_gain_cal_file = ['nb.gain.5876.30Sep2014.ave.sav', '5876']
     nb_5876_gain_name     = ['nb_gain_5876_ave', 5876]
-    nb_6563_gain_cal_file = ['nb.gain.6563.30Sep2014.ave.sav', 6563]
+    nb_6563_gain_cal_file = ['nb.gain.6563.30Sep2014.ave.sav', '6563']
     nb_6563_gain_name     = ['nb_gain_6563_ave', 6563]
-    nb_8542_gain_cal_file = ['nb.gain.8542.30Sep2014.ave.sav', 8542]
+    nb_8542_gain_cal_file = ['nb.gain.8542.30Sep2014.ave.sav', '8542']
     nb_8542_gain_name     = ['nb_gain_8542_ave', 8542]
 
     nb_gain_cal_file  = [[nb_5876_gain_cal_file], [nb_6563_gain_cal_file], [nb_7090_gain_cal_file], [nb_8542_gain_cal_file]]
