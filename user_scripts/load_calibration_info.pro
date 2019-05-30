@@ -33,7 +33,7 @@ calibration_location = repository_location + 'calibration_files/'
     nb_8542_gain_name     = ['nb_gain_8542_ave', 8542]
 
     nb_gain_cal_file  = [[nb_5876_gain_cal_file], [nb_6563_gain_cal_file], [nb_7090_gain_cal_file], [nb_8542_gain_cal_file]]
-    nb_gain_name      = [[nb_5876_gain_cal_name], [nb_6563_gain_cal_name], [nb_7090_gain_cal_name], [nb_8542_gain_cal_name]]
+    nb_gain_name      = [[nb_5876_gain_name], [nb_6563_gain_name], [nb_7090_gain_name], [nb_8542_gain_name]]
 
     num_minutes   = 300
     time_start    = 14.5
