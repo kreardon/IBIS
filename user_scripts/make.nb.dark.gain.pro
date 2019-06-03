@@ -313,8 +313,8 @@ flat_file_nb = File_Search(ave_ser_dir,'FlatFieldCalibration.' + narrowband_tag 
 
         IF do_save_data THEN BEGIN
             variables = 'nb_darks, nb_darks_exptime, nb_darks_timerange, dark_nb_files'
-            output_dark_filename = 'nb.darks.' + day_id + 'sav'
-            saveoutput = EXECUTE('SAVE, /Compress, Filename='''' + output_dark_filename + '''',' + variables + ',/Compressed')
+            output_dark_filename = 'nb.darks.' + day_id + '.sav'
+            saveoutput = EXECUTE('SAVE, /Compress, Filename='''' + output_dark_filename + '''',' + variables)
 
             variables = 'nb_gain_' + series_id + ', nb_gain_info_' + series_id + ', flat_linepos_' + series_id
             variables = variables + ', flat_bluefit_' + series_id + ', flat_alignprof_' + series_id
