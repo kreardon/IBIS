@@ -90,7 +90,7 @@ res = EXECUTE('dark_cal = ' + cal_params.dark_name)
 res = EXECUTE('gain_cal = ' + cal_params.gain_name)
 
 ; apply dark and flat correction to data
-image_array = (image_array - dark_cal) / wl_gain
+image_array = (image_array - dark_cal) / gain_cal
 
 ; rotate image to roughly match solar Cartesian coordinates (North up, East left)
 image_array = ROTATE(image_array,cal_params.transpose)
@@ -134,13 +134,13 @@ IF KEYWORD_SET(keep_size) THEN BEGIN
 
     pix_rangex_arr = [0,target_scale_pixel[0]]
     pix_rangex_out = [0,image_array_szx-1]
-    IF target_scale_diff[0] GT 0 THEN pix_rangex_arr = [ROUND((target_scale_diff[0])/2.),(target_scale_diff[0])/2. + image_array_szx-1]
-    IF target_scale_diff[0] LT 0 THEN pix_rangex_out = [ROUND(target_scale_diff[0]/2.),       ROUND(target_scale_diff[0]/2.) + target_scale_pixel[0]]
+    IF target_scale_diff[0] GT 0 THEN pix_rangex_arr = [ROUND( target_scale_diff[0]/2.), ROUND( target_scale_diff[0]/2.) + image_array_szx-1]
+    IF target_scale_diff[0] LT 0 THEN pix_rangex_out = [ROUND(-target_scale_diff[0]/2.), ROUND(-target_scale_diff[0]/2.) + target_scale_pixel[0]]
 
     pix_rangey_arr = [0,target_scale_pixel[1]]
     pix_rangey_out = [0,image_array_szy-1]
-    IF target_scale_diff[1] GT 0 THEN pix_rangey_arr = [ROUND((target_scale_diff[1])/2.),(target_scale_diff[1])/2. + image_array_szy-1]
-    IF target_scale_diff[0] LT 0 THEN pix_rangey_out = [ROUND(target_scale_diff[1]/2.),       ROUND(target_scale_diff[1]/2.) + target_scale_pixel[1]]
+    IF target_scale_diff[1] GT 0 THEN pix_rangey_arr = [ROUND( target_scale_diff[1]/2.), ROUND( target_scale_diff[1]/2.) + image_array_szy-1]
+    IF target_scale_diff[0] LT 0 THEN pix_rangey_out = [ROUND(-target_scale_diff[1]/2.), ROUND(-target_scale_diff[1]/2.) + target_scale_pixel[1]]
 
     image_array_keep = FLTARR(image_array_szx, image_array_szy) + MEDIAN(image_array)
     image_array_keep[pix_rangex_out[0]:pix_rangex_out[1],pix_rangey_out[0]:pix_rangey_out[1]] = $
