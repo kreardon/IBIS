@@ -75,7 +75,7 @@ calibration_location = repository_location + 'calibration_files/'
 
     ;Precalculated hmi_pixel cutouts for the 
     hmi_pixel_cutout        = FLTARR(1,5)
-    hmi_pixel_cutout[0,*]   = [346,1345,359,1358, reftime] 
+    hmi_pixel_cutout[0,*]   = [346,1345,359,1358, time_ref] 
 
     ; ---------- ROSA Corrections --------
     ; -- plate scale and rotation of ROSA images
