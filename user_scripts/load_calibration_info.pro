@@ -13,8 +13,8 @@ target_plate_scale   = 0.096
 repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
 calibration_location = repository_location + 'calibration_files/'
 
-   
-
+    ; name of IDL save file containing calibration frames
+    ; name of variable in save file for desired calibration type
     wl_dark_cal_file = 'whitelight.darks.30Sep2014.sav'
     wl_dark_name     = 'wl_dark_ave'
     wl_gain_cal_file = 'whitelight.gains.30Sep2014.sav'
@@ -40,8 +40,13 @@ calibration_location = repository_location + 'calibration_files/'
     time_ref                = (fits_date_convert('2014-09-30T18:00:00'))[0]
 
     rot_grid_to_sol_north   = [[time_ref],[-0.249]]
-    rot_wl_to_sol_north     = [[time_ref],[0.321]]    ; determined from fitting to HMI
-    rot_to_sol_reftime      = time_ref
+    rot_nb_to_wl            = [[time_ref],[-0.40]]
+    ; fixed value for rotation
+    ;rot_wl_to_sol_north     = [0.32]    ; determined from fitting to HMI
+    ; linear trend to rotation
+    rot_wl_to_sol_north     = [0.098793436,0.29216892]    ; determined from fitting to HMI
+    ; reference time is midnight in UT
+    rot_wl_to_sol_reftime   = 2456930.5
 
     ;scale_ibis_wl          = [ 0.09668, 0.09680 ]
     ;scale_ibis_wl          = [ 0.09074, 0.09295 ]  ; determined from dot grid
@@ -53,15 +58,17 @@ calibration_location = repository_location + 'calibration_files/'
     scale_ibis_6563         = [0.09533, 0.09742, 6563]
     scale_ibis_5876         = [0.09494, 0.09707, 5876]
     scale_ibis_nb           = [[scale_ibis_5876],[scale_ibis_6563],[scale_ibis_7090],[scale_ibis_8542]]
-    rot_ibis_nb             = [ 0.18 ]
+    ;rot_ibis_nb             = [ 0.18 ]
+    rot_ibis_nb             = rot_ibis_wl + rot_nb_to_wl[1]
     
     shift_ibis_wl_even      = [0, 0]
     shift_ibis_nb_even      = [0, 0]  
+    shift_wl_to_nb          = [19.6, -17.6]
 
-    shift_target_8542       = [ -0.0,  -0.0, 8542 ] 
-    shift_target_7090       = [ -0.0,   0.0, 7090 ] 
+    shift_target_8542       = [ -2.8,   3.2, 8542 ] 
+    shift_target_7090       = [ -1.1,   3.8, 7090 ] 
     shift_target_6563       = [ -0.0,  -0.0, 6563 ] 
-    shift_target_5876       = [ -0.0,  -0.0, 5876 ] 
+    shift_target_5876       = [  4.3,  -3.6, 5876 ] 
     shift_target_nb         = [ [shift_target_5876], [shift_target_6563], [shift_target_7090], [shift_target_8542] ]
     
     filter_ids              = ['', '8542', '7773', '6563', '', '7699', '7090', '5876']
@@ -89,17 +96,19 @@ calibration_location = repository_location + 'calibration_files/'
     rot_rosa_cak      = [+0.41]
 
 
-rot_to_solnorth_combo = rot_grid_to_sol_north
+;rot_to_solnorth_combo = rot_grid_to_sol_north
+rot_to_solnorth_combo = rot_wl_to_sol_north
 
 CASE STRLOWCASE(instrument_channel) OF
     'ibis_wl' : BEGIN
-        rot_to_solnorth_combo[*,1] += rot_ibis_wl[0]
+        ;rot_to_solnorth_combo[*,1] += rot_ibis_wl[0]
         output_info = CREATE_STRUCT('transpose',          ibis_wl_transpose, $
                                     'rot_to_solnorth',    rot_to_solnorth_combo, $
-                                    'rot_to_sol_reftime', rot_to_sol_reftime, $
+                                    'rot_to_sol_reftime', rot_wl_to_sol_reftime, $
                                     'rot_to_grid',        rot_ibis_wl, $
                                     'plate_scale',        scale_ibis_wl, $
                                     'shift_even_scale',   shift_ibis_wl_even, $
+                                    'optical_shift',      shift_wl_to_nb, $
                                     'hmi_pixel_cutout',   hmi_pixel_cutout, $
                                     'dark_file',          wl_dark_cal_file, $
                                     'dark_name',          wl_dark_name, $
@@ -107,10 +116,11 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'gain_name',          wl_gain_name)
     END
     'ibis_nb' : BEGIN
-        rot_to_solnorth_combo[*,1] += rot_ibis_nb[0]
+        ;rot_to_solnorth_combo[*,1] += rot_ibis_nb[0]
+        rot_to_solnorth_combo[0]    += rot_nb_to_wl[1]
         output_info = CREATE_STRUCT('transpose',          ibis_nb_transpose, $
                                     'rot_to_solnorth',    rot_to_solnorth_combo, $
-                                    'rot_to_sol_reftime', rot_to_sol_reftime, $
+                                    'rot_to_sol_reftime', rot_wl_to_sol_reftime, $
                                     'rot_to_grid',        rot_ibis_nb, $
                                     'plate_scale',        scale_ibis_nb, $
                                     'shift_even_scale',   shift_ibis_nb_even,$
