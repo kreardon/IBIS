@@ -34,8 +34,20 @@ ENDIF
 
 IF KEYWORD_SET(k7699) THEN BEGIN
 
-    mask1_pos = [92,180,29]
-    mask2_pos = [112,220,19]
+;    mask1_pos = [92,180,29]
+;    mask2_pos = [112,220,19]
+;    mask5_pos = [nx/2.,ny/2.,3]
+    mask1_pos = [72,148,35]
+    mask2_pos = [165,890,19]
+    mask5_pos = [nx/2.,ny/2.,3]
+
+
+ENDIF
+
+IF KEYWORD_SET(fe7090) THEN BEGIN
+
+    mask1_pos = [190,885,29]
+    mask2_pos = [78,162,39]
     mask5_pos = [nx/2.,ny/2.,3]
 
 ENDIF
