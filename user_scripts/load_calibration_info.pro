@@ -110,9 +110,10 @@ calibration_location = repository_location + 'calibration_files/'
 
     ; this is a placeholder for the future definition of the time-dependent offsets between wavelengths due to
     ; atmospheric dispersion or time-dependent changes in the offset between whitelight and narrowband channels
-    wl_to_nb_drift          = DBLARR(4,num_minutes,num_filters)
-    wl_optical_drifts       = FLTARR(2,num_minutes)
-    atm_dispersion_nb       = FLTARR(2,num_minutes,num_filters)
+    num_timesteps           = 300
+    wl_to_nb_drift          = DBLARR(4,num_timesteps,num_filters) + 1
+    wl_optical_drifts       = FLTARR(2,num_timesteps) + 1
+    atm_dispersion_nb       = FLTARR(2,num_timesteps,num_filters) + 1
 
     ;Precalculated hmi_pixel cutouts for the 
     hmi_pixel_cutout        = FLTARR(1,5)
