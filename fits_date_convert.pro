@@ -73,6 +73,7 @@ FOR daten = 0LL,fits_date_len - 1 DO BEGIN
 ENDFOR
 
 julian_dates_all = REFORM(julian_dates_all)
+IF N_ELEMENTS(julian_dates_all) EQ 1 THEN julian_dates_all = julian_dates_all[0]
 
 RETURN, julian_dates_all
 
