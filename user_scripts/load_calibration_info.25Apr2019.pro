@@ -31,7 +31,7 @@ calibration_location = repository_location + 'calibration_files/'
     nb_dark_cal_file      = 'nb.dark.ave.25Apr2019.sav'
     nb_dark_name          = 'nb_dark_ave'
     
-    nb_7090_gain_cal_file = 'Fe7090.gain.ave.info.20190425.sav'
+    nb_7090_gain_cal_file = 'Fe7090.gain.info.20190425.ave.sav'
     nb_7090_gain_name     = ['nb_gain_7090_ave', '7090']
 
     nb_7699_gain_cal_file = 'K7699.gain.info.20190425.ave.sav'
@@ -70,7 +70,7 @@ calibration_location = repository_location + 'calibration_files/'
 
     ; the rotation angle of the whitelight dot grid determined from find_dot_grid_spacing.pro
     ; multiple dot grid images are processed to reduce the noise
-    rot_ibis_wl             = [ 0.08 ]
+    rot_ibis_wl             = [ 0.13 ]
 
     ; IBIS narrowband plate scales - determined from dot grid using find_dot_grid_spacing.pro
     scale_ibis_7090         = [0.09748, 0.09752, 7090]
