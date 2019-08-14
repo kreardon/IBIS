@@ -83,7 +83,7 @@ image_array_szy = image_array_sz.dimensions[1]
 
 ; get time - in string and Julian Day - of the image
 image_dateobs    = sxpar(image_hdr, 'DATE-OBS')
-image_dateobs_jd = fits_date_convert(image_dateobs)
+image_dateobs_jd = (fits_date_convert(image_dateobs))[0]
 date_str         = STRMID(image_dateobs,0,10)
 
 ; check input channel specification against information in FITS header
@@ -113,7 +113,7 @@ dark_file_valid = FILE_TEST(dark_file_use)
 IF N_ELEMENTS(gain_file) EQ 1 THEN gain_file_use = gain_file ELSE gain_file_use = cal_params.gain_file
 gain_name = cal_params.gain_name
 IF channel_id EQ 'nb' THEN BEGIN
-    gain_waves     = FIX(cal_params.gain_file[1,*])
+    gain_waves     = FIX(cal_params.gain_name[1,*])
     gain_idx       = get_closest(gain_waves, wavelength_nb)
     gain_file_use  = gain_file_use[0, gain_idx]
     
