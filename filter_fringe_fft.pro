@@ -1,4 +1,4 @@
-FUNCTION filter_fringe_fft, imin, halpha=halpha, ca8542=ca8542, na5896=na5896, k7699=k7699, fe5434=fe5434, fft_power=fft_power, fft_mask=fft_mask
+FUNCTION filter_fringe_fft, imin, halpha=halpha, ca8542=ca8542, na5896=na5896, k7699=k7699, fe5434=fe5434, fe7090=fe7090, fft_power=fft_power, fft_mask=fft_mask
 
 nx = 1000
 ny = 1000
@@ -54,7 +54,8 @@ ENDIF
 
 IF KEYWORD_SET(fe5434) THEN BEGIN
 
-    mask1_pos = [100,212,49]
+    ;mask1_pos = [100,212,49]
+    mask1_pos = [97,183,29]
     mask2_pos = [nx/2.,ny/2.,3]
     mask5_pos = [nx/2.,ny/2.,3]
     ;mask2_pos = [762,182,9]
