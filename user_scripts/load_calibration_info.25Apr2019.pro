@@ -70,7 +70,7 @@ calibration_location = repository_location + 'calibration_files/'
 
     ; the rotation angle of the whitelight dot grid determined from find_dot_grid_spacing.pro
     ; multiple dot grid images are processed to reduce the noise
-    rot_ibis_wl             = [ 0.13 ]
+    rot_ibis_wl             = [ 0.08 ]
 
     ; IBIS narrowband plate scales - determined from dot grid using find_dot_grid_spacing.pro
     scale_ibis_7090         = [0.09748, 0.09752, 7090]
@@ -124,8 +124,8 @@ calibration_location = repository_location + 'calibration_files/'
 
     ;Precalculated hmi_pixel cutouts for the 
     hmi_pixel_cutout        = FLTARR(1,5)
-    ;hmi_pixel_cutout[0,*]   = [544, 1543, 482, 1481, time_ref] 
-    hmi_pixel_cutout[0,*]    = [87, 246, 77, 236, time_ref]
+    hmi_pixel_cutout[0,*]   = [543, 1542, 482, 1481, time_ref] 
+    ;hmi_pixel_cutout[0,*]    = [87, 246, 77, 236, time_ref]
     
     ; ---------- ROSA Corrections --------
     ; values are saved here for future use but are not currently returned
@@ -151,6 +151,7 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'rot_to_sol_reftime', rot_wl_to_sol_reftime, $
                                     'rot_to_grid',        rot_ibis_wl, $
                                     'plate_scale',        scale_ibis_wl, $
+                                    'uniform_plate_scale', target_plate_scale, $
                                     'shift_even_scale',   shift_ibis_wl_even, $
                                     'optical_shift',      shift_wl_to_nb, $
                                     'hmi_pixel_cutout',   hmi_pixel_cutout, $
