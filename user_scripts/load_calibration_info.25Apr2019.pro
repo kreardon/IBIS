@@ -169,8 +169,10 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'rot_to_sol_reftime', rot_wl_to_sol_reftime, $
                                     'rot_to_grid',        rot_ibis_nb, $
                                     'plate_scale',        scale_ibis_nb, $
+                                    'uniform_plate_scale', target_plate_scale, $
                                     'shift_even_scale',   shift_ibis_nb_even,$
                                     'optical_shift',      shift_target_nb, $
+                                    'hmi_pixel_cutout',   hmi_pixel_cutout, $
                                     'wl_to_nb_drift',     wl_to_nb_drift, $
                                     'wl_drifts',          wl_optical_drifts, $
                                     'atm_dispersion',     atm_dispersion_nb, $
