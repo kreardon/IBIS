@@ -1,6 +1,6 @@
 FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavelength_nb, dark_file=dark_file, gain_file=gain_file, $
-                               rotate_array=rotate_array, keep_size=keep_size, calibration_location=calibration_location, $
-                               target_scale=target_scale, verbose=verbose, header_out=header_out
+                               rotate_array=rotate_array, keep_size=keep_size, cal_directory=cal_directory, $
+                               target_scale=target_scale, verbose=verbose, header_out=header_out,cal_info_out=cal_info_out
 
 ;+
 ; NAME:
@@ -33,8 +33,11 @@ FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavel
 ;                    [default = 0.096]
 ;     keep_size     - make output array have same spatial dimensions as original input array, even
 ;                        after rescaling [default = 1]
-;     calibration_location - directory path to calibration files, absolute or relative (e.g. 'calibration_files')
-;     verbose       - determines if any information is printed out during execution
+;     cal_directory - directory path to calibration files, absolute or relative (e.g. 'calibration_files')
+;     verbose       - determines what information is printed out during execution
+;                     1 - prints rotation and shift values applied
+;                     2 - also prints name of dark and gain files used
+;                     3 - also sets verbose flag during calibration file restore
 ;
 ; OPTIONAL OUTPUT KEYWORD:
 ;     header_out    - header corresponding to loaded image	
@@ -55,13 +58,12 @@ FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavel
 
 
 IF N_ELEMENTS(verbose)   LE 0 THEN verbose=0
-IF verbose LT 2 THEN restore_verbose = 0 ELSE restore_verbose = 1
+IF verbose LT 3 THEN restore_verbose = 0 ELSE restore_verbose = 1
 
 IF N_ELEMENTS(keep_size) LE 0 THEN keep_size=1
 
 ; set up desired orientation and scale 
 IF NOT KEYWORD_SET(rotate_array) THEN rotate_array='solar_north'
-IF NOT KEYWORD_SET(target_scale) THEN target_scale=0.096
 
 ; determine whether input image is narrowband or whitelight
 IF StrMatch(channel,'*nb*') THEN channel_id = 'nb' ELSE channel_id = 'wl'
@@ -96,17 +98,25 @@ IF NOT keyword_set(wavelength_nb) THEN wavelength_nb = ROUND(sxpar(image_hdr, 'W
 
 ; get calibration information from external function
 ; date_str is actually ignored, so it doesn't matter
-cal_params = load_calibration_info(date_str, 'ibis_' + channel_id)
+cal_params   = load_calibration_info(date_str, 'ibis_' + channel_id)
+cal_info_out = cal_params
 
-IF NOT Keyword_Set(calibration_location) THEN BEGIN
+; if the user hasn't specified a desired image scale (or specified 0) then
+; we will use the default value from load_calibration_info
+; if the user did specify a plate scale, we will put that into the 
+; calibration parameter struture for future reference
+IF NOT KEYWORD_SET(target_scale) THEN target_scale = cal_params.uniform_plate_scale $
+    ELSE cal_params.uniform_plate_scale = target_scale
+
+IF NOT Keyword_Set(cal_directory) THEN BEGIN
     repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
-    calibration_location = repository_location + 'calibration_files/'
+    cal_directory = repository_location + 'calibration_files/'
 ENDIF
 
 ; determine if calibration files are valid and accessible
 IF N_ELEMENTS(dark_file) EQ 1 THEN dark_file_use = dark_file ELSE dark_file_use = cal_params.dark_file
 dark_name       = cal_params.dark_name
-IF FILE_TEST(calibration_location) THEN dark_file_use = calibration_location + '/' + dark_file_use
+IF FILE_TEST(cal_directory) THEN dark_file_use = cal_directory + '/' + dark_file_use
 dark_file_valid = FILE_TEST(dark_file_use)
 
 ; identify proper gain file and array for narrowband image of interest
@@ -121,21 +131,23 @@ IF channel_id EQ 'nb' THEN BEGIN
     gain_idx       = get_closest(gain_waves, wavelength_nb)
     gain_name      = cal_params.gain_name[0, gain_idx]
 ENDIF
-IF FILE_TEST(calibration_location) THEN gain_file_use = calibration_location + '/' + gain_file_use
+IF FILE_TEST(cal_directory) THEN gain_file_use = cal_directory + '/' + gain_file_use
 gain_file_valid = FILE_TEST(gain_file_use)
 
 IF dark_file_valid NE 1 THEN BEGIN
-    dark_files = File_Search(calibration_location,'*dark*' + channel_id + '*', count=dark_count)
+    dark_files = File_Search(cal_directory,'*dark*' + channel_id + '*', count=dark_count)
     dark_file_use  = dark_files[0]
 ENDIF
 
 IF gain_file_valid NE 1 THEN BEGIN
-    gain_files = File_Search(calibration_location,'*gain*' + channel_id + '*', count=dark_count)
+    gain_files = File_Search(cal_directory,'*gain*' + channel_id + '*', count=dark_count)
     gain_file_use  = gain_files[0]
 ENDIF
 
 ; restore identified calibration files
+IF verbose GE 2 THEN PRINT,'Restoring Dark Calibration File: ' + dark_file_use
 RESTORE,Verbose=restore_verbose,dark_file_use
+IF verbose GE 2 THEN PRINT,'Restoring Gain Calibration File: ' + gain_file_use
 RESTORE,Verbose=restore_verbose,gain_file_use
 
 ; set defined calibration array to a common name
@@ -165,13 +177,13 @@ ENDFOR
 
 IF STRMATCH(rotate_array,'*solar*') THEN BEGIN
     image_array = ROT(image_array,image_rot_angle,CUBIC=-0.5)
-    IF verbose GE 2 THEN PRINT,'Rotating: ', image_rot_angle
+    IF verbose GE 1 THEN PRINT,'Rotating: ', image_rot_angle
 ENDIF ELSE IF STRMATCH(rotate_array,'*grid*') THEN BEGIN
     image_array = ROT(image_array,cal_params.rot_to_grid[0],CUBIC=-0.5)
-    IF verbose GE 2 THEN PRINT,'Rotating: ', cal_params.rot_to_grid[0]
+    IF verbose GE 1 THEN PRINT,'Rotating: ', cal_params.rot_to_grid[0]
 ENDIF ELSE IF (size(rotate_array,/str)).TYPE_NAME NE 'STRING' THEN BEGIN
     image_array = ROT(image_array,rotate_array,CUBIC=-0.5)
-    IF verbose GE 2 THEN PRINT,'Rotating: ', rotate_array
+    IF verbose GE 1 THEN PRINT,'Rotating: ', rotate_array
 ENDIF
 
 ; rescale image to desired, equal plate scale
