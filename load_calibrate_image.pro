@@ -1,6 +1,7 @@
 FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavelength_nb, dark_file=dark_file, gain_file=gain_file, $
-                               rotate_array=rotate_array, keep_size=keep_size, cal_directory=cal_directory, $
-                               target_scale=target_scale, verbose=verbose, header_out=header_out,cal_info_out=cal_info_out
+                               rotate_array=rotate_array, keep_size=keep_size, apply_distortion_map=apply_distortion_map, $
+                               cal_directory=cal_directory, target_scale=target_scale, $
+                               verbose=verbose, header_out=header_out, cal_info_out=cal_info_out
 
 ;+
 ; NAME:
@@ -33,6 +34,8 @@ FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavel
 ;                    [default = 0.096]
 ;     keep_size     - make output array have same spatial dimensions as original input array, even
 ;                        after rescaling [default = 1]
+;     apply_distortion_map - apply destretch vectors to narrowband image to correct static optical distortions.
+;                            typically only applies to narrowband images
 ;     cal_directory - directory path to calibration files, absolute or relative (e.g. 'calibration_files')
 ;     verbose       - determines what information is printed out during execution
 ;                     1 - prints rotation and shift values applied
@@ -65,11 +68,16 @@ IF N_ELEMENTS(keep_size) LE 0 THEN keep_size=1
 ; set up desired orientation and scale 
 IF NOT KEYWORD_SET(rotate_array) THEN rotate_array='solar_north'
 
+IF NOT Keyword_Set(cal_directory) THEN BEGIN
+    repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
+    cal_directory = repository_location + 'calibration_files/'
+ENDIF
+
 ; determine whether input image is narrowband or whitelight
 IF StrMatch(channel,'*nb*') THEN channel_id = 'nb' ELSE channel_id = 'wl'
 ; check input channel specification against typical file directory scheme
 channel_guess = channel
-IF StrMatch(filename, '*spectral*') THEN channel_guess='nb'
+IF StrMatch(filename, '*spectral*') OR StrMatch(filename, '*_ibis*') THEN channel_guess='nb'
 IF StrMatch(filename, '*whitelight*') THEN channel_guess='wl'
 IF channel_guess NE channel THEN PRINT,"Warning: Input channel type doesn't seem to match filename path!"
 
@@ -98,8 +106,13 @@ IF NOT keyword_set(wavelength_nb) THEN wavelength_nb = ROUND(sxpar(image_hdr, 'W
 
 ; get calibration information from external function
 ; date_str is actually ignored, so it doesn't matter
-cal_params   = load_calibration_info(date_str, 'ibis_' + channel_id)
+cal_params   = load_calibration_info(date_str, 'ibis_' + channel_id, cal_directory=cal_directory)
 cal_info_out = cal_params
+cal_params_tag = Tag_Names(cal_params)
+IF (MAX(STRMATCH(cal_params_tag,'nb_to_wl_destr_sft',/fold_case)) GE 1) AND $
+   (MAX(STRMATCH(cal_params_tag,'nb_to_wl_destr_ref',/fold_case)) GE 1) $
+THEN have_distortion_map = 1 $
+ELSE have_distortion_map = 0
 
 ; if the user hasn't specified a desired image scale (or specified 0) then
 ; we will use the default value from load_calibration_info
@@ -107,11 +120,6 @@ cal_info_out = cal_params
 ; calibration parameter struture for future reference
 IF NOT KEYWORD_SET(target_scale) THEN target_scale = cal_params.uniform_plate_scale $
     ELSE cal_params.uniform_plate_scale = target_scale
-
-IF NOT Keyword_Set(cal_directory) THEN BEGIN
-    repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
-    cal_directory = repository_location + 'calibration_files/'
-ENDIF
 
 ; determine if calibration files are valid and accessible
 IF N_ELEMENTS(dark_file) EQ 1 THEN dark_file_use = dark_file ELSE dark_file_use = cal_params.dark_file
@@ -232,6 +240,15 @@ IF KEYWORD_SET(keep_size) THEN BEGIN
     image_array = image_array_keep
 ENDIF
 
+IF have_distortion_map AND Keyword_Set(apply_distortion_map) THEN BEGIN
+    device_orig = !D
+    set_plot,'Z'
+    device,set_resolution=[image_array_szx,image_array_szy]*1.2
+    image_array = doreg(image_array, cal_params.nb_to_wl_destr_ref, cal_params.nb_to_wl_destr_sft)
+    IF verbose GE 1 THEN PRINT,"Applying distortion mapping"
+    set_plot,device_orig.name
+ENDIF
+
 ; apply shifts to images so the whitelight and different narrowband images are approximately co-aligned
 IF channel_id EQ 'wl' THEN BEGIN
     image_shift = cal_params.optical_shift
@@ -241,7 +258,7 @@ ENDIF ELSE BEGIN
     image_shift       = cal_params.optical_shift[0:1, filter_idx_select]
 ENDELSE
 
-IF verbose GE 1 THEN PRINT,"Applying a shift of : ",image_shift," pixels"
+IF verbose GE 1 THEN PRINT,"Applying a shift of : ",STRING(image_shift,FORMAT='(F6.3,",",F6.3)')," pixels"
 ; use ROT to apply the shift, because it doesn't cause wrapping at the edges of the array, which can be annoying (and wrong)
 image_array = ROT(image_array, 0.0, 1.0, (image_array_szx-1)/2. - image_shift[0], (image_array_szy-1)/2. - image_shift[1], /Interp, Missing = MEDIAN(image_array))
 
