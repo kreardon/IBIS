@@ -1,4 +1,4 @@
-FUNCTION load_calibration_info, date_str, instrument_channel
+FUNCTION load_calibration_info, date_str, instrument_channel, cal_directory=cal_directory
 
 ; sample usage:
 ; nb_21apr_info = load_alma_calibration_info('21Apr2017','ibis_nb') 
@@ -16,8 +16,12 @@ target_plate_scale   = 0.096
 
 ; look for a "calibration_files" directory as a subdirectory of the directory
 ; where this program is found
-repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
-calibration_location = repository_location + 'calibration_files/'
+IF NOT KEYWORD_SET(cal_directory) THEN BEGIN
+    repository_location = File_Dirname(Routine_Filepath(/Either),/Mark)
+    calibration_location = repository_location + 'calibration_files/'
+ENDIF ELSE BEGIN
+    calibration_location = cal_directory
+ENDELSE
 
     ; name of IDL save file containing calibration frames and
     ; name of variable in save file for desired calibration type
@@ -95,19 +99,29 @@ calibration_location = repository_location + 'calibration_files/'
     ; optical shifts between images through different filters
     ; these are determined by computing the cross correlation between the Air Force target images taken through different filters
     ; one filter is choses as the "reference wavelength," or some average position could be chosen
-    ; in this case, the H-alpha filter was chosen, since it's position was most "central"
-    ; (i.e. the other filters had shifts on either side of the H-alpha position
     ; these shifts are due to optical effects from the (tilted) prefilter or the automatic repositioning of the camera 
     ; to adjust focus for each filter.
-    shift_target_7090       = [ -1.0,   1.6, 7090 ] 
-    shift_target_7699       = [  1.0,   0.5, 7699 ] 
-    shift_target_5434       = [ -4.1,   0.1, 5434 ] 
+
+    ; original values
+    ; shift_target_7090       = [ -1.0,   1.6, 7090 ] 
+    ; shift_target_7699       = [  1.0,   0.5, 7699 ] 
+    ; shift_target_5434       = [ -4.1,   0.1, 5434 ] 
+    ; new revised values, 03 September, 2019
+    shift_target_7090       = [ -1.0 + 0.07,   2.15 - 0.1, 7090 ] 
+    shift_target_7699       = [  1.38 - 0.06,   0.6 + 0.07, 7699 ] 
+    shift_target_5434       = [ -4.1 + 0.14,   0.1 + 0.15, 5434 ] 
+
     shift_target_nb         = [ [shift_target_7090], [shift_target_7699], [shift_target_5434] ]
 
     ; optical shifts between narrowband reference wavelength and whitelight channel
     ; this value is also calculated from the cross-correlation between the whitelight target image and the 
     ; target image at the reference wavelength
-    shift_wl_to_nb          = [ 4.3, 8.9 ]
+    shift_wl_to_nb          = [ 4.47, 9.18 ]
+    
+    ; load_destretch vectors
+    vects_in    = read_ascii(calibration_location + '/destr.components.nb2wl.txt',type='float',record_start=0,data_start=1)
+    rdisp_nb2wl = reform(vects_in.field1[0:1,*],2,49,49)
+    disp_nb2wl  = reform(vects_in.field1[2:3,*],2,49,49)
     
     ; define which filters were in the wheel for a given observing day, and which filters were used
     filter_ids              = ['', '8542', '7090', '6563', '', '7699', '5896', '5434']
@@ -173,6 +187,8 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'shift_even_scale',   shift_ibis_nb_even,$
                                     'optical_shift',      shift_target_nb, $
                                     'hmi_pixel_cutout',   hmi_pixel_cutout, $
+                                    'nb_to_wl_destr_ref', rdisp_nb2wl, $
+                                    'nb_to_wl_destr_sft', disp_nb2wl, $
                                     'wl_to_nb_drift',     wl_to_nb_drift, $
                                     'wl_drifts',          wl_optical_drifts, $
                                     'atm_dispersion',     atm_dispersion_nb, $
