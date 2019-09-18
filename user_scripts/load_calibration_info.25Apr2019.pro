@@ -119,9 +119,14 @@ ENDELSE
     shift_wl_to_nb          = [ 4.47, 9.18 ]
     
     ; load_destretch vectors
-    vects_in    = read_ascii(calibration_location + '/destr.components.nb2wl.txt',type='float',record_start=0,data_start=1)
-    rdisp_nb2wl = reform(vects_in.field1[0:1,*],2,49,49)
-    disp_nb2wl  = reform(vects_in.field1[2:3,*],2,49,49)
+    IF FILE_TEST(calibration_location + '/destr.components.nb2wl.txt',/Read) THEN BEGIN
+        vects_in    = read_ascii(calibration_location + '/destr.components.nb2wl.txt',type='float',record_start=0,data_start=1)
+        rdisp_nb2wl = reform(vects_in.field1[0:1,*],2,49,49)
+        disp_nb2wl  = reform(vects_in.field1[2:3,*],2,49,49)
+    ENDIF ELSE BEGIN
+        rdisp_nb2wl = -1
+        disp_nb2wl  = -1
+    ENDELSE
     
     ; define which filters were in the wheel for a given observing day, and which filters were used
     filter_ids              = ['', '8542', '7090', '6563', '', '7699', '5896', '5434']
