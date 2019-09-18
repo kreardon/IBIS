@@ -59,6 +59,7 @@ FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavel
 ;	Written, Kevin Reardon, National Solar Observatory, 2018-2019
 ;-
 
+FORWARD_FUNCTION doreg
 
 IF N_ELEMENTS(verbose)   LE 0 THEN verbose=0
 IF verbose LT 3 THEN restore_verbose = 0 ELSE restore_verbose = 1
@@ -244,6 +245,9 @@ IF have_distortion_map AND Keyword_Set(apply_distortion_map) THEN BEGIN
     device_orig = !D
     set_plot,'Z'
     device,set_resolution=[image_array_szx,image_array_szy]*1.2
+    IF MAX(STRMATCH(routine_info(/functions),'REG')) LE 0 THEN BEGIN
+        dummy = reg(findgen(10,10),findgen(10,10),bytarr(3,3))
+    ENDIF
     image_array = doreg(image_array, cal_params.nb_to_wl_destr_ref, cal_params.nb_to_wl_destr_sft)
     IF verbose GE 1 THEN PRINT,"Applying distortion mapping"
     set_plot,device_orig.name
