@@ -262,7 +262,7 @@ ENDIF ELSE BEGIN
     image_shift_optical = cal_params.optical_shift[0:1, filter_idx_select]
     
     wl_to_nb_drift_params  = cal_params.wl_to_nb_drift
-    drift_params_num       = N_ELEMENTS(rot_fit_params[0,*])
+    drift_params_num       = N_ELEMENTS(wl_to_nb_drift_params[0,*])
     image_time_scale       = image_dateobs_jd - cal_params.rot_to_sol_reftime
     wl_to_nb_offset        = [0.0, 0.0]
 
@@ -272,18 +272,20 @@ ENDIF ELSE BEGIN
         ENDFOR
     ENDFOR
     wl_to_nb_offset /= cal_params.plate_scale
+    wl_to_nb_offset *= -1
     
     filter_idx_select     = get_closest(cal_params.atm_dispersion[2,0,*],wavelength_nb)
     dispersion_match_time = get_closest(cal_params.atm_dispersion_times, image_dateobs_jd)
     dispersion_x          = INTERPOL(cal_params.atm_dispersion[0,*,filter_idx_select],cal_params.atm_dispersion_times, image_dateobs_jd)
     dispersion_y          = INTERPOL(cal_params.atm_dispersion[1,*,filter_idx_select],cal_params.atm_dispersion_times, image_dateobs_jd)
-    dispersion_offset     = [dispersion_x, dispersion_y] / cal_params.plate_scale
+    dispersion_offset     = -[dispersion_x, dispersion_y] / cal_params.plate_scale
 
-    PRINT,'Fixed offset = ',image_shift_optical
-    PRINT,'Variable offset = ',wl_to_nb_offset
-    PRINT,'Dispersion correction = ',dispersion_offset
-    image_shift = image_shift_optical 
-    ;image_shift = image_shift_optical + wl_to_nb_offset + dispersion_offset
+    IF verbose GE 2 THEN BEGIN
+        PRINT,'Fixed internal offset = ',image_shift_optical
+        PRINT,'Variable internal offset = ',wl_to_nb_offset
+        PRINT,'Atmospheric dispersion correction = ',dispersion_offset
+    ENDIF
+    image_shift = image_shift_optical + wl_to_nb_offset + dispersion_offset
 ENDELSE
 
 IF verbose GE 1 THEN PRINT,"Applying a shift of : ",STRING(image_shift,FORMAT='(F6.3,",",F6.3)')," pixels"
