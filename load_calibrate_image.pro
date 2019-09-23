@@ -259,7 +259,28 @@ IF channel_id EQ 'wl' THEN BEGIN
 ENDIF ELSE BEGIN
     ; filter_idx_select = where(fix(cal_params.plate_scale[2,*])  eq wavelength)
     filter_idx_select = get_closest(cal_params.optical_shift[2,*],wavelength_nb)
-    image_shift       = cal_params.optical_shift[0:1, filter_idx_select]
+    image_shift_optical = cal_params.optical_shift[0:1, filter_idx_select]
+    
+    wl_to_nb_drift_params  = cal_params.wl_to_nb_drift
+    drift_params_num       = N_ELEMENTS(rot_fit_params[0,*])
+    image_time_scale       = image_dateobs_jd - cal_params.rot_to_sol_reftime
+    wl_to_nb_offset        = [0.0, 0.0]
+
+    FOR dir=0,1 DO BEGIN
+        FOR nn=0,drift_params_num-1 DO BEGIN
+	    wl_to_nb_offset[dir] += wl_to_nb_drift_params[,dir,nn] * (image_time_scale)^nn
+        ENDFOR
+    ENDFOR
+    
+    
+    filter_idx_select     = get_closest(cal_params.atm_dispersion[2,0,*],wavelength_nb)
+    dispersion_match_time = get_closest(cal_params.atm_dispersion_times, image_dateobs_jd)
+    dispersion_x          = INTERPOL(cal_params.atm_dispersion[0,*,filter_idx_select],cal_params.atm_dispersion_times, image_dateobs_jd)
+    dispersion_y          = INTERPOL(cal_params.atm_dispersion[1,*,filter_idx_select],cal_params.atm_dispersion_times, image_dateobs_jd)
+
+    PRINT,'Dispersion correction = ',dispersion_x,dispersion_y
+    image_shift = image_shift_optical 
+    ;image_shift = image_shift_optical + wl_to_nb_offset + [dispersion_x, dispersion_y]
 ENDELSE
 
 IF verbose GE 1 THEN PRINT,"Applying a shift of : ",STRING(image_shift,FORMAT='(F6.3,",",F6.3)')," pixels"
