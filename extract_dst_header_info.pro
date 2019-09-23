@@ -77,7 +77,7 @@ dst_elevation_uniq    = FLOAT(dst_elevation_str[dst_times_uniq_idx])
 dst_azimuth_uniq      = FLOAT(dst_azimuth_str[dst_times_uniq_idx])
 dst_tableangle_uniq   = FLOAT(dst_tableangle_str[dst_times_uniq_idx])
 dst_guiderangle_uniq  = FLOAT(dst_guiderangle_str[dst_times_uniq_idx])
-
+STOP
 ; interpolate the unique seeing and light level values onto the same 
 ;    time grid as the data themselves
 dst_seeing_interp     = INTERPOL(dst_seeing_uniq, dst_times_jd_uniq, date_obs_jd)
