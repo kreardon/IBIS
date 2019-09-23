@@ -245,7 +245,7 @@ IF have_distortion_map AND Keyword_Set(apply_distortion_map) THEN BEGIN
     device_orig = !D
     set_plot,'Z'
     device,set_resolution=[image_array_szx,image_array_szy]*1.2
-    IF MAX(STRMATCH(routine_info(/functions),'REG')) LE 0 THEN BEGIN
+    IF MAX(STRMATCH(routine_info(/functions),'DOREG')) LE 0 THEN BEGIN
         dummy = reg(findgen(10,10),findgen(10,10),bytarr(3,3))
     ENDIF
     image_array = doreg(image_array, cal_params.nb_to_wl_destr_ref, cal_params.nb_to_wl_destr_sft)
