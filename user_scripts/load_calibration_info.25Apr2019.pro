@@ -136,11 +136,47 @@ ENDELSE
 
     ; this is a placeholder for the future definition of the time-dependent offsets between wavelengths due to
     ; atmospheric dispersion or time-dependent changes in the offset between whitelight and narrowband channels
-    num_timesteps           = 300
-    wl_to_nb_drift          = DBLARR(4,num_timesteps,num_filters) + 1
-    wl_optical_drifts       = FLTARR(2,num_timesteps) + 1
-    atm_dispersion_nb       = FLTARR(2,num_timesteps,num_filters) + 1
+    ;wl_to_nb_drift          = DBLARR(4,num_timesteps,num_filters) + 1
+    wl_to_nb_drift          = [  -1795.28,    2979.13,   14061.74,  -21798.14,  -43832.50,   63662.14,  $
+                                 67972.67,  -92785.72,  -52450.36,   67499.80,   16115.69,  -19611.18]
+    wl_to_nb_drift          = REFORM(wl_to_nb_drift, 2, 6)
 
+    PRINT,FILE_TEST(FILE_SEARCH(calibration_location, 'atmospheric.dispersion.calc.25Apr2019.sav'),/Read)
+    IF STRLOWCASE(instrument_channel) EQ 'ibis_nb' THEN BEGIN
+        atm_dispersion_file = (FILE_SEARCH(calibration_location, 'atmospheric.dispersion.calc.25Apr2019.sav'))[0]
+	IF FILE_TEST(atm_dispersion_file,/Read) THEN BEGIN
+	    RESTORE,Verbose=1,atm_dispersion_file
+	    ; provides ATM_DISP_CALC and SEQUENCE_TIMES
+	    
+	    ; pull out refraction values decomposed into x- and y-shifts (in solar heliocentric coordinates)
+	    dispcalc_sfts       = [REFORM(atm_disp_calc.SFTS_HELIOCENT_EW,1,1048,4),REFORM(atm_disp_calc.SFTS_HELIOCENT_NS,1,1048,4)]
+	    dispcalc_sfts_size  = SIZE(dispcalc_sfts)
+	    num_timesteps       = dispcalc_sfts_size[2]
+	    ; ATM_DISP_CALC.times_jd also stores the times for the calculated refraction
+	    atm_dispersion_times = sequence_times
+
+	    ; take difference between the refraction at the wavelengths of the whitelight image
+	    ; and the refraction at each narrowband wavelength to get theoretical dispersion offsets 
+	    ; between each of the channels/filters
+	    ; the atmospheric dispersion values are stored in increasing wavelength order - [5434,7090,7200,7699]
+	    ; 7200 (index 2) is the wavelength of the whitelight images, so all the shifts 
+	    ; are differenced with respect to that wavelength
+	    atm_dispersion_nb            = FLTARR(3,num_timesteps,num_filters)
+	    atm_dispersion_nb[2,*,0]     = atm_disp_calc.wavelengths[1]*10
+	    atm_dispersion_nb[2,*,1]     = atm_disp_calc.wavelengths[3]*10
+	    atm_dispersion_nb[2,*,2]     = atm_disp_calc.wavelengths[0]*10
+	    atm_dispersion_nb[0:1,*,0,0] = dispcalc_sfts[*,*,2] - dispcalc_sfts[*,*,1]
+	    atm_dispersion_nb[0:1,*,1,0] = dispcalc_sfts[*,*,2] - dispcalc_sfts[*,*,3]
+	    atm_dispersion_nb[0:1,*,2,0] = dispcalc_sfts[*,*,2] - dispcalc_sfts[*,*,0]
+	ENDIF ELSE BEGIN
+	    num_timesteps              = 300
+	    atm_dispersion_nb          = FLTARR(3,2,num_filters)
+	    FOR filtn = 0,num_filters-1 DO BEGIN & atm_dispersion_nb[2,*,filtn] = FLOAT(filter_ids[filters_used[filtnum]]) & ENDFOR
+	    atm_dispersion_times       = [time_ref, time_ref+1]
+	ENDELSE
+	wl_optical_drifts       = FLTARR(2,num_timesteps)
+    ENDIF
+    
     ;Precalculated hmi_pixel cutouts for the 
     hmi_pixel_cutout        = FLTARR(1,5)
     hmi_pixel_cutout[0,*]   = [543, 1542, 482, 1481, time_ref] 
@@ -197,6 +233,7 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'wl_to_nb_drift',     wl_to_nb_drift, $
                                     'wl_drifts',          wl_optical_drifts, $
                                     'atm_dispersion',     atm_dispersion_nb, $
+                                    'atm_dispersion_times',atm_dispersion_times, $
                                     'filter_ids',         filter_ids, $
                                     'dark_file',          nb_dark_cal_file, $
                                     'dark_name',          nb_dark_name, $
