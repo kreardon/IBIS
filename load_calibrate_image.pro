@@ -281,9 +281,9 @@ ENDIF ELSE BEGIN
     dispersion_offset     = -[dispersion_x, dispersion_y] / cal_params.plate_scale
 
     IF verbose GE 2 THEN BEGIN
-        PRINT,'Fixed internal offset = ',image_shift_optical
-        PRINT,'Variable internal offset = ',wl_to_nb_offset
-        PRINT,'Atmospheric dispersion correction = ',dispersion_offset
+        PRINT,'Fixed internal offset [pixels] = ',image_shift_optical
+        PRINT,'Variable internal offset [pixels] = ',wl_to_nb_offset
+        PRINT,'Atmospheric dispersion correction [pixels] = ',dispersion_offset
     ENDIF
     image_shift = image_shift_optical + wl_to_nb_offset + dispersion_offset
 ENDELSE
