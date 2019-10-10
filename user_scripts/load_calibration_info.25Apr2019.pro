@@ -36,18 +36,20 @@ ENDELSE
     nb_dark_name          = 'nb_dark_ave'
     
     nb_7090_gain_cal_file = 'Fe7090.gain.info.20190425.ave.sav'
-    nb_7090_gain_name     = ['nb_gain_7090_ave', '7090']
+    nb_7090_gain_name     = ['nb_gain_7090_ave', '7090', 'nb_gain_info_7090']
 
     nb_7699_gain_cal_file = 'K7699.gain.info.20190425.ave.sav'
-    nb_7699_gain_name     = ['nb_gain_k7699_ave','7699']  
+    nb_7699_gain_name     = ['nb_gain_k7699_ave','7699', 'nb_gain_k7699_info_ave']  
 
     nb_5434_gain_cal_file  = 'Fe5434.gain.info.20190425.ave.sav'
-    nb_5434_gain_name      = ['nb_gain_5434_ave','5434']
-
+    nb_5434_gain_name      = ['nb_gain_5434_ave','5434', 'nb_gain_5434_info']
 
     nb_gain_cal_file      = [[nb_7090_gain_cal_file], [nb_7699_gain_cal_file], [nb_5434_gain_cal_file]]
     nb_gain_name          = [[nb_7090_gain_name], [nb_7699_gain_name], [nb_5434_gain_name]]
 
+    nb_bad_pixel_file      = 'narrowband.bad.pixel.index.txt'
+    wl_bad_pixel_file      = 'whitelight.bad.pixel.index.txt'
+    
     ; pick a reference time for some time-dependent values
     ; typically pick the time of midnight before the start of the observations
     time_ref                = (fits_date_convert('2019-04-25T00:00:00'))[0]
@@ -141,11 +143,11 @@ ENDELSE
                                  67972.67,  -92785.72,  -52450.36,   67499.80,   16115.69,  -19611.18]
     wl_to_nb_drift          = REFORM(wl_to_nb_drift, 2, 6)
 
-    PRINT,FILE_TEST(FILE_SEARCH(calibration_location, 'atmospheric.dispersion.calc.25Apr2019.sav'),/Read)
+    found_atm_disp_file = FILE_TEST(FILE_SEARCH(calibration_location, 'atmospheric.dispersion.calc.25Apr2019.sav'),/Read)
     IF STRLOWCASE(instrument_channel) EQ 'ibis_nb' THEN BEGIN
         atm_dispersion_file = (FILE_SEARCH(calibration_location, 'atmospheric.dispersion.calc.25Apr2019.sav'))[0]
 	IF FILE_TEST(atm_dispersion_file,/Read) THEN BEGIN
-	    RESTORE,Verbose=1,atm_dispersion_file
+	    RESTORE,Verbose=0,atm_dispersion_file
 	    ; provides ATM_DISP_CALC and SEQUENCE_TIMES
 	    
 	    ; pull out refraction values decomposed into x- and y-shifts (in solar heliocentric coordinates)
@@ -171,7 +173,7 @@ ENDELSE
 	ENDIF ELSE BEGIN
 	    num_timesteps              = 300
 	    atm_dispersion_nb          = FLTARR(3,2,num_filters)
-	    FOR filtn = 0,num_filters-1 DO BEGIN & atm_dispersion_nb[2,*,filtn] = FLOAT(filter_ids[filters_used[filtnum]]) & ENDFOR
+	    FOR filtn = 0,num_filters-1 DO BEGIN & atm_dispersion_nb[2,*,filtn] = FLOAT(filter_ids[filters_used[filtn]]) & ENDFOR
 	    atm_dispersion_times       = [time_ref, time_ref+1]
 	ENDELSE
 	wl_optical_drifts       = FLTARR(2,num_timesteps)
@@ -213,7 +215,8 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'dark_file',          wl_dark_cal_file, $
                                     'dark_name',          wl_dark_name, $
                                     'gain_file',          wl_gain_cal_file, $
-                                    'gain_name',          wl_gain_name)
+                                    'gain_name',          wl_gain_name, $
+                                    'bad_pixel_file',     wl_bad_pixel_file)
     END
     'ibis_nb' : BEGIN
         ; add the relative rotation between the narrowband and whitelight channels to 
@@ -238,7 +241,8 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'dark_file',          nb_dark_cal_file, $
                                     'dark_name',          nb_dark_name, $
                                     'gain_file',          nb_gain_cal_file, $
-                                    'gain_name',          nb_gain_name)
+                                    'gain_name',          nb_gain_name, $
+                                    'bad_pixel_file',     nb_bad_pixel_file)
     END
 ENDCASE
 
