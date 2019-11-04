@@ -1,8 +1,8 @@
 FUNCTION load_calibrate_image, filename, extension, channel, wavelength_nb=wavelength_nb, dark_file=dark_file, gain_file=gain_file, $
                                rotate_array=rotate_array, keep_size=keep_size, apply_distortion_map=apply_distortion_map, $
                                cal_directory=cal_directory, target_scale=target_scale, filter_fringe=filter_fringe, $
-                               verbose=verbose, no_interpolation=no_interpolation, $
-                               header_out=header_out, cal_info_out=cal_info_out, gain_out=gain_cal, shifts_out=image_shift
+                               verbose=verbose, no_interpolation=no_interpolation, no_gain_dark_cal=no_gain_dark_cal, $
+                               header_out=header_out, cal_info_out=cal_info_out, gain_out=gain_cal, shifts_out=image_shift, image_time=image_time
                                
 
 ;+
@@ -85,6 +85,14 @@ ENDIF
 
 IF N_ELEMENTS(no_interpolation) LE 0 THEN no_interpolation=0
 
+; if user provided a time, try to convert that to a Julian Date
+IF N_ELEMENTS(image_time) EQ 1 THEN BEGIN
+    IF STRMATCH(SIZE(image_time,/TName), 'STRING', /Fold) THEN image_dateobs_jd = (fits_date_convert(image_time))[0]
+    IF STRMATCH(SIZE(image_time,/TName), 'DOUBLE', /Fold) THEN image_dateobs_jd = image_time
+    caldat,image_dateobs_jd,mm,dd,yy
+    date_str = STRTRIM(yy,2) + '-' + STRING(mm,format='(I2.2)') + '-' + STRING(dd,format='(I2.2)')
+ENDIF
+
 ; determine whether input image is narrowband or whitelight
 IF StrMatch(channel,'*nb*') THEN channel_id = 'nb' ELSE channel_id = 'wl'
 ; check input channel specification against typical file directory scheme
@@ -107,13 +115,17 @@ image_array_sz  = SIZE(image_array,/str)
 image_array_szx = image_array_sz.dimensions[0]
 image_array_szy = image_array_sz.dimensions[1]
 
-; get time - in string and Julian Day - of the image
-image_dateobs    = sxpar(image_hdr, 'DATE-OBS')
-image_dateobs_jd = (fits_date_convert(image_dateobs))[0]
-date_str         = STRMID(image_dateobs,0,10)
+; If the user provided an "image_time" then image_dateobs_jd will have been defined above
+; and we don't need to parse it out of the header.
+; Otherwise, get time - in string and Julian Day - from the image header
+IF N_ELEMENTS(image_dateobs_jd) LE 0 THEN BEGIN
+    image_dateobs    = sxpar(image_hdr, 'DATE-OBS')
+    image_dateobs_jd = (fits_date_convert(image_dateobs))[0]
+    date_str         = STRMID(image_dateobs,0,10)
+ENDIF
 
 ; check input channel specification against information in FITS header
-image_channel    = sxpar(header_out, 'CHANNEL')
+image_channel    = sxpar(header_out, 'CHANNEL', /silent)
 IF StrMatch(image_channel,'*whitelight*',/Fold_Case) THEN channel_guess='wl' ELSE IF StrMatch(image_channel,'*narrowband*',/Fold_Case) THEN channel_guess='nb'
 IF channel_guess NE channel THEN PRINT,"Warning: Input channel type doesn't seem to match FITS header information!"
 
@@ -185,34 +197,38 @@ bad_pixel_file_valid = FILE_TEST(bad_pixel_file)
 ; get appropriate dark and gain calibration; apply to image
 ; ----------------------------------------------------------------------
 
-; restore identified calibration files
-IF verbose GE 2 THEN PRINT,'Restoring Dark Calibration File: ' + dark_file_use
-RESTORE,Verbose=restore_verbose,dark_file_use
-IF verbose GE 2 THEN PRINT,'Restoring Gain Calibration File: ' + gain_file_use
-RESTORE,Verbose=restore_verbose,gain_file_use
+IF NOT Keyword_Set(no_gain_dark_cal) THEN BEGIN
 
-; set defined calibration array to a common name
-res = EXECUTE('dark_cal  = ' + dark_name[0])
-res = EXECUTE('gain_cal  = ' + gain_name[0])
+    ; restore identified calibration files
+    IF verbose GE 2 THEN PRINT,'Restoring Dark Calibration File: ' + dark_file_use
+    RESTORE,Verbose=restore_verbose,dark_file_use
+    IF verbose GE 2 THEN PRINT,'Restoring Gain Calibration File: ' + gain_file_use
+    RESTORE,Verbose=restore_verbose,gain_file_use
 
-IF channel_id EQ 'nb' THEN BEGIN
-    res = EXECUTE('gain_info = ' + gain_info[0])
-    gain_waves = gain_info.wavelengths
-    gain_match = get_closest(gain_waves, rel_wave_nb)
-    gain_diff  = (gain_waves[gain_match] - rel_wave_nb)
-    IF (gain_diff GE 5) AND (verbose GE 1) THEN BEGIN 
-	print,rel_wave_nb,gain_waves[gain_match],$
-		format='("Warning: Image wavelength (", F8.3, ") and gain table wavelength (", F8.3, ") mismatch!")'
-    ENDIF ELSE IF (verbose GE 3) THEN BEGIN 
-	print,rel_wave_nb,gain_waves[gain_match],$
-		format='("Image wavelength : ", F8.3, " - Gain table wavelength : ", F8.3)'
+    ; set defined calibration array to a common name
+    res = EXECUTE('dark_cal  = ' + dark_name[0])
+    res = EXECUTE('gain_cal  = ' + gain_name[0])
+
+    IF channel_id EQ 'nb' THEN BEGIN
+	res = EXECUTE('gain_info = ' + gain_info[0])
+	gain_waves = gain_info.wavelengths
+	gain_match = get_closest(gain_waves, rel_wave_nb)
+	gain_diff  = (gain_waves[gain_match] - rel_wave_nb)
+	IF (gain_diff GE 5) AND (verbose GE 1) THEN BEGIN 
+	    print,rel_wave_nb,gain_waves[gain_match],$
+		    format='("Warning: Image wavelength (", F8.3, ") and gain table wavelength (", F8.3, ") mismatch!")'
+	ENDIF ELSE IF (verbose GE 3) THEN BEGIN 
+	    print,rel_wave_nb,gain_waves[gain_match],$
+		    format='("Image wavelength : ", F8.3, " - Gain table wavelength : ", F8.3)'
+	ENDIF
+	
+	gain_cal = gain_cal[*,*,gain_match]
     ENDIF
-    
-    gain_cal = gain_cal[*,*,gain_match]
-ENDIF
 
-; apply dark and flat correction to data
-image_array = (image_array - dark_cal) / gain_cal
+    ; apply dark and flat correction to data
+    image_array = (image_array - dark_cal) / gain_cal
+
+ENDIF ; skip if no_gain_dark_cal is set
 
 ; ----------------------------------------------------------------------
 ; filter out bad pixels
