@@ -49,6 +49,15 @@ ENDELSE
 
     nb_bad_pixel_file      = 'narrowband.bad.pixel.index.txt'
     wl_bad_pixel_file      = 'whitelight.bad.pixel.index.txt'
+
+    nb_7090_blue_map_file  = calibration_location + 'blueshift.map.ave.7090.25Apr2019.sav'
+    nb_7090_blue_map_name  = ['blueshift_map_7090', '7090']
+    nb_7699_blue_map_file  = calibration_location + 'blueshift.map.ave.7699.25Apr2019.sav'
+    nb_7699_blue_map_name  = ['blueshift_map_7699', '7699']
+    nb_5434_blue_map_file  = calibration_location + 'blueshift.map.ave.5434.25Apr2019.sav'
+    nb_5434_blue_map_name  = ['blueshift_map_5434', '5434']
+    nb_blue_map_file       = [[nb_7090_blue_map_file], [nb_7699_blue_map_file], [nb_5434_blue_map_file]]
+    nb_blue_map_name       = [[nb_7090_blue_map_name], [nb_7699_blue_map_name], [nb_5434_blue_map_name]]
     
     ; pick a reference time for some time-dependent values
     ; typically pick the time of midnight before the start of the observations
@@ -242,6 +251,8 @@ CASE STRLOWCASE(instrument_channel) OF
                                     'dark_name',          nb_dark_name, $
                                     'gain_file',          nb_gain_cal_file, $
                                     'gain_name',          nb_gain_name, $
+                                    'bluemap_file',       nb_blue_map_file, $
+                                    'bluemap_name',       nb_blue_map_name, $
                                     'bad_pixel_file',     nb_bad_pixel_file)
     END
 ENDCASE
